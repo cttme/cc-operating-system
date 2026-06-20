@@ -1,0 +1,7 @@
+# Pre-Commit Gate Calibration Stats — {{PROJECT_NAME}}
+
+> Append a Tier result on every `/commit` invocation.
+> Format: `[YYYY-MM-DD HH:MM] tier=N verdict=PASS|WARN|FAIL files=X lines=Y`
+> Weekly review: soften if false-positive rate >30%, tighten if false-negative rate >5%.
+
+---

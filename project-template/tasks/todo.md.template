@@ -1,0 +1,16 @@
+# Active Task Plan — {{PROJECT_NAME}}
+
+## Active
+
+- [ ] Complete project setup (test runner, CI, deps)
+- [ ] First feature
+
+## Backlog
+
+- [ ] Auth
+- [ ] Deploy pipeline
+- [ ] Monitoring
+
+## Completed
+
+- [x] Bootstrap (claude-code template applied)

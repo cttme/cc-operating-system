@@ -1,0 +1,67 @@
+# Dependencies & builds
+node_modules/
+__pycache__/
+.venv/
+venv/
+dist/
+build/
+.next/
+out/
+coverage/
+
+# Lock files
+*.lock
+package-lock.json
+yarn.lock
+poetry.lock
+
+# Minified & media
+*.min.js
+*.min.css
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.pdf
+*.zip
+
+# Logs & temp
+*.log
+logs/
+tmp/
+*.tmp
+.git/
+.coverage
+coverage-baseline.json
+.tmp_audit/
+.pytest_cache/
+
+# Backup files
+*.bak-*
+tasks.bak-*/
+.claude.bak-*/
+
+# Archive (lazy-load only)
+tasks/archive/
+docs/archive/
+
+# Audit output (claude audit-* skill — lazy load)
+audit/findings/
+audit/baseline/
+
+# Build artifacts
+*.tsbuildinfo
+storybook-static/
+.turbo/
+
+# Python build artifacts
+*.egg-info/
+.eggs/
+.mypy_cache/
+.ruff_cache/
+
+# Data
+*.csv
+*.parquet
+*.pkl

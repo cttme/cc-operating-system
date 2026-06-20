@@ -1,0 +1,52 @@
+# Pre-commit framework config — {{PROJECT_NAME}}
+# Install: pip install pre-commit && pre-commit install
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(.*\.md|tasks/archive/|docs/archive/)
+      - id: end-of-file-fixer
+        exclude: ^(tasks/archive/|docs/archive/)
+      - id: check-yaml
+      - id: check-json
+        exclude: ^(\.tmp_audit/|data/archive/|tasks/archive/)
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Python (eğer Python projesi ise — gerekmezse kaldır)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.10
+    hooks:
+      - id: bandit
+        args: ['-c', 'pyproject.toml', '-q']
+        additional_dependencies: ['bandit[toml]']
+        exclude: ^(tests/|alembic/)
+
+  # Secret scanning
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
+  # Frontend hooks (eğer frontend varsa)
+  # - repo: local
+  #   hooks:
+  #     - id: frontend-typescript
+  #       name: TypeScript check
+  #       entry: bash -c 'cd frontend && npx tsc --noEmit'
+  #       language: system
+  #       files: ^frontend/.*\.(ts|tsx)$
+  #       pass_filenames: false

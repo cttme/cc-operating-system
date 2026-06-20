@@ -1,0 +1,53 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short --cov=. --cov-report=term --cov-fail-under=70"
+
+[tool.coverage.run]
+source = ["{{COVERAGE_SOURCES}}"]
+omit = [
+    "*/tests/*",
+    "*/archive/*",
+    "*/__pycache__/*",
+    "conftest.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+fail_under = 70
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+extend-exclude = [
+    "tasks/archive",
+    "tasks/refs",
+    "docs/archive",
+    ".tmp_audit",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = false
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101"]

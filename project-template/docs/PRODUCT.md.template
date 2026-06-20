@@ -1,0 +1,27 @@
+# {{PROJECT_NAME}} — Ürün Vizyonu & UI/UX
+
+{{PROJECT_DESCRIPTION}}
+
+---
+
+## Hedef Kitle
+
+[Kullanıcı tanımı]
+
+## Ana Özellikler
+
+- [Özellik 1]
+- [Özellik 2]
+- [Özellik 3]
+
+## UI/UX Prensipleri
+
+- [Prensip 1]
+- [Prensip 2]
+
+---
+
+## Referanslar
+
+- Mimari → `docs/ARCHITECTURE.md`
+- Faz planı → `tasks/todo.md`

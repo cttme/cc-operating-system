@@ -1,0 +1,7 @@
+# Audit Trail — {{PROJECT_NAME}}
+
+> Append every routing / agent invocation / destructive op here.
+> Format: `[YYYY-MM-DD HH:MM:SS] category: detail`
+> Recourse: "why was Opus picked?" → the answer is here.
+
+---

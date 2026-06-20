@@ -1,0 +1,16 @@
+# Architecture Decisions — {{PROJECT_NAME}}
+
+> Format:
+>
+> ```
+> ## YYYY-MM-DD: [Decision title]
+> **Context:** ...
+> **Alternatives:** (A) ... (B) ... (C) ...
+> **Decision:** ...
+> **Why:** ...
+> **Outcome:** PR #... | (pending)
+> ```
+>
+> Rotate to `tasks/refs/decisions-archive.md` when the file exceeds 500 lines.
+
+---

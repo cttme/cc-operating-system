@@ -1,0 +1,45 @@
+# Personal Preferences — Global Claude Code Config (EXAMPLE)
+
+> This is an **example** `~/.claude/CLAUDE.md`. `install.sh` places it at
+> `~/.claude/CLAUDE.md` (backing up any existing one first). **Edit every line to
+> match how you work** — these are preferences, not requirements. This file loads
+> into every Claude Code session on your machine, across all projects, so keep it
+> short and high-signal.
+
+## Language
+- Reply language (default English — set your own).
+- Commit messages: conventional commits (`feat/fix/refactor/docs/test`), English.
+- Code comments: English.
+- Product-facing strings (UI text, emails, legal pages, SEO) stay in your product's language.
+
+## Working style
+- Plan-first: for any 3+ step task, analyze before coding (`/plan`).
+- Read the existing code and match its patterns before changing it.
+- Give a one-line "why" for each significant decision.
+- If something goes wrong, **stop and re-plan** — don't push blindly forward.
+
+## Verification
+- After a code change: run the related tests.
+- After a data / IO change: exercise it with a small sample — don't assume.
+- After a DB change: run the migration and verify it.
+- Ask: "would a senior engineer approve this?"
+
+## Subagent use
+- Delegate research, exploration, and parallel analysis to subagents.
+- Keep the main context window clean.
+- One task per subagent: focused execution.
+
+## Local model routing (optional — Ollama / `ask-local`)
+- Large grep/find output (30+ lines) → triage with `/ask-local` first, then read only what matters.
+- Reading 300+ line archive/reference files for context → summarize with `/ask-local` first.
+- Translation / single-shot snippet work → local model.
+- Code generation / refactor / multi-step reasoning → **never** local; that needs Claude.
+
+## Self-improvement
+- When the user corrects you, write it to the project's lessons log (`tasks/lessons.md`).
+- Write a rule that prevents the same mistake recurring.
+- Promote stable lessons into `.claude/rules/`.
+
+## Platform
+- OS / shell / runtime notes — e.g. "Windows 11, Git Bash; `python` not `python3`;
+  path separator `/`."

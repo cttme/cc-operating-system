@@ -1,0 +1,143 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash(python *)",
+      "Bash(pytest *)",
+      "Bash(git *)",
+      "Bash(pip *)",
+      "Bash(npm *)",
+      "Bash(pre-commit *)",
+      "Bash(ruff *)",
+      "Bash(mypy *)",
+      "Bash(bandit *)",
+      "Bash(ccusage *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Edit(.env)",
+      "Read(.env)",
+      "Read(secrets/*)",
+      "Edit(secrets/*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '=== Session start ==='; echo ''; echo '-- Branch --'; git branch --show-current 2>/dev/null || echo 'no git'; echo '-- Last 3 commits --'; git log --oneline -3 2>/dev/null || true; echo ''; echo '-- Handoff (last 12) --'; tail -12 tasks/handoff.md 2>/dev/null || echo 'no handoff'; echo ''; echo '-- Token usage today --'; ccusage daily 2>/dev/null | tail -6 || echo 'ccusage not installed'",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python scripts/model_routing_hint.py 2>/dev/null || true",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -c \"import sys,json,re; data=json.load(sys.stdin); path=data.get('tool_input',{}).get('file_path','') or data.get('tool_input',{}).get('path',''); blocked=[r'\\.env\\b', r'secrets/']; matched=[p for p in blocked if re.search(p,path)]; (print(f'BLOCKED: {path} matches {matched}', file=sys.stderr), sys.exit(2)) if matched else sys.exit(0)\"",
+            "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "python scripts/one_way_door_hint.py 2>/dev/null || true",
+            "timeout": 5000
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -c \"import sys,json,re; data=json.load(sys.stdin); cmd=data.get('tool_input',{}).get('command',''); dangerous=[r'\\brm\\s+-rf\\s+/', r'\\bDROP\\s+TABLE\\b', r'\\bformat\\s+c:', r'\\bdd\\s+if=']; matched=[p for p in dangerous if re.search(p,cmd,re.I)]; (print(f'BLOCKED: dangerous pattern {matched}', file=sys.stderr), sys.exit(2)) if matched else sys.exit(0)\"",
+            "timeout": 5000
+          }
+        ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python scripts/ask_local_hint.py 2>/dev/null || true",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -c \"import sys,json,subprocess; data=json.load(sys.stdin); path=data.get('tool_input',{}).get('file_path','') or ''; sys.exit(0) if not path.endswith('.py') else sys.exit(subprocess.run(['python','-m','py_compile',path],capture_output=True).returncode)\"",
+            "timeout": 10000
+          },
+          {
+            "type": "command",
+            "command": "python -c \"import sys,json,subprocess; data=json.load(sys.stdin); path=data.get('tool_input',{}).get('file_path','') or ''; sys.exit(0) if not path.endswith('.py') else sys.exit(subprocess.run(['python','scripts/run_tests_for_file.py',path],capture_output=True,timeout=60).returncode)\"",
+            "timeout": 90000
+          },
+          {
+            "type": "command",
+            "command": "python scripts/size_guard.py 2>/dev/null || true",
+            "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "python scripts/check_config_syntax.py 2>&1 || true",
+            "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "python scripts/check_claude_refs.py 2>&1 || true",
+            "timeout": 15000
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python scripts/session_budget_check.py 2>&1 || true",
+            "timeout": 8000
+          },
+          {
+            "type": "command",
+            "command": "python scripts/cost_breakdown.py --hook 2>&1 || true",
+            "timeout": 8000
+          },
+          {
+            "type": "command",
+            "command": "(command -v notify-send >/dev/null 2>&1 && notify-send 'Claude Code' 'Session bitti') || (command -v osascript >/dev/null 2>&1 && osascript -e 'display notification \"Session bitti\" with title \"Claude Code\"') || (command -v powershell >/dev/null 2>&1 && powershell -NoProfile -Command \"[console]::beep(800,200)\") || true",
+            "timeout": 3000
+          }
+        ]
+      }
+    ]
+  }
+}

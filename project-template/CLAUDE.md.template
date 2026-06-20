@@ -1,0 +1,126 @@
+# {{PROJECT_NAME}} — Project Memory
+
+{{PROJECT_DESCRIPTION}}
+
+---
+
+## 🧭 Quick Navigation (start here)
+
+| Topic | File |
+|---|---|
+| Product vision + UI/UX | `docs/PRODUCT.md` |
+| Architecture detail (folder tree) | `docs/ARCHITECTURE.md` |
+| Active tasks | `tasks/todo.md` |
+| Current state, next task | `tasks/handoff.md` |
+| Lessons learned | `tasks/lessons.md` |
+| Decisions | `tasks/decisions.md` |
+| Audit trail (routing/agent) | `tasks/audit.md` |
+| Permanent rules | `.claude/rules/` (auto-loaded) |
+| Historical docs | `tasks/archive/` |
+| Reference files | `tasks/refs/` |
+
+---
+
+## ⚙️ Tech Stack
+
+{{TECH_STACK}}
+
+---
+
+## 🚦 Fixed Ports
+
+- Frontend: **{{FRONTEND_PORT}}**
+- Backend: **{{BACKEND_PORT}}**
+
+---
+
+## 🔑 Critical Files
+
+- `.env` — secrets — **DO NOT TOUCH**
+- `secrets/` — API keys — **DO NOT TOUCH**
+
+---
+
+## 🏃 Run
+
+```bash
+{{RUN_COMMANDS}}
+```
+
+---
+
+## 🛡️ Pre-Commit Gate
+
+Defined in `.pre-commit-config.yaml`:
+- File hygiene (trailing-whitespace, end-of-file, large files)
+- {{LANG_LINT}} (ruff / eslint)
+- Security scan (bandit / gitleaks)
+- Type check (mypy / tsc)
+
+---
+
+## 📐 Working Principles (5 items)
+
+### 1. Interview-First (3+ steps → plan first)
+For ambiguous work, ask in one sentence. Use the `/triage` → `/plan` skill flow.
+
+### 2. Surgical Changes (Simplicity First)
+Touch only the lines that must change. Do not expand refactor scope. YAGNI.
+
+### 3. Data Integrity
+- No silent failures — log and skip
+- If unsure, mark as "unmatched"
+- No data deletion — soft delete
+
+### 4. Verification Before Done
+"It ran" ≠ "it is done". Tests pass + manual check + "would a senior approve this?"
+
+### 5. Token & Carbon Discipline
+- `<folder>/index.md` FIRST, then files
+- Prefer `Read(offset, limit)`; full-file read forbidden
+- 200+ lines → use an `Explore` subagent
+- Opus is not the default — route via `/triage`
+- `/clear` after a subtask completes, `/compact` mid-task
+
+---
+
+## 🔄 Session Start Protocol
+
+New session:
+1. `/onboard` (reads the brief from handoff, presents it)
+2. "yes" (or redirect)
+3. Work begins
+
+## 🏁 Session End
+
+1. `/session-end` (updates handoff, appends lessons/decisions, generates starter)
+2. `/clear`
+
+---
+
+## 🤖 Skills
+
+**Global (every project):**
+- `/onboard` — session start orientation
+- `/session-end` — session close + handoff update
+- `/verify` — health check (8 checks)
+- `/triage`, `/plan`, `/commit` — standard Claude Code skills
+
+---
+
+## 📚 Permanent Rules
+
+`.claude/rules/` auto-loads:
+- `thinking-pipeline.md` — lifecycle + reversibility×stakes selector + shared output contract (the "how to think before acting" spine)
+- `change-protocol.md` — high-risk-change discipline + one-way/two-way door axis
+- `foundation.md` — module/index.md discipline, file-size limits, twin-gate, "which checker when"
+
+---
+
+## 🏗️ Hygiene Principle (Lean Engineering)
+
+- **Single Source of Truth:** each piece of information lives in one place
+- **Modular:** `<folder>/index.md` in every primary module
+- **Size discipline:** CLAUDE.md under 150 lines, lessons/decisions under 500 lines
+- **Rotation:** when limits are hit, archive + leave a reference (never delete)
+- **Audit Trail:** every routing → `tasks/audit.md`, every decision → `tasks/decisions.md`

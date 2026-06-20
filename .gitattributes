@@ -1,0 +1,7 @@
+# Normalize line endings. Store text as LF in the repo so shell scripts stay
+# runnable on Linux/macOS adopters regardless of the author's platform.
+* text=auto eol=lf
+
+# Windows-native scripts keep CRLF on checkout.
+*.bat text eol=crlf
+*.ps1 text eol=crlf

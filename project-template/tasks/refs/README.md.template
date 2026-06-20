@@ -1,0 +1,12 @@
+# tasks/refs/ — Reference Files
+
+> Files here are **not active** but **not deleted**. They are read on demand and referenced when making decisions. Do not write new content here.
+
+## Example files (future)
+
+- `decisions-archive.md` — older architecture decisions (rotation target when decisions.md exceeds 500 lines)
+- `<topic>-checklist.md` — large process checklists (affiliate application, go-live, etc.)
+
+---
+
+This file ships with bootstrap. Fill it as the project needs.

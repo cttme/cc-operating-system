@@ -1,0 +1,13 @@
+# Lessons Learned — {{PROJECT_NAME}}
+
+> Per-session pitfalls and resolutions. Format:
+>
+> ```
+> ## YYYY-MM-DD: [Topic]
+> **Error:** ... **Cause:** ... **Rule:** ... **Count:** 1
+> ```
+>
+> Promote to `.claude/rules/<topic>.md` when Count ≥ 5.
+> Rotate to `tasks/archive/lessons-YYYY-Q.md` when the file exceeds 500 lines.
+
+---

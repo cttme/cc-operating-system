@@ -1,0 +1,9 @@
+FROM gemma4:e4b-it-qat
+# ask-local workload = deterministic single-shot structured output
+# (classify/extract/summarize) -> low temp for consistency, matching the
+# prior qwen35-fast config intent (was 0.3). NOT Google's chat default (1.0).
+PARAMETER num_ctx 8192
+PARAMETER num_predict 512
+PARAMETER temperature 0.3
+PARAMETER top_k 64
+PARAMETER top_p 0.95

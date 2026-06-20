@@ -1,0 +1,54 @@
+# Session Handoff — {{PROJECT_NAME}} (Initial)
+
+> Earlier sessions: `tasks/archive/`
+
+## Environment
+
+- **Project:** `{{PROJECT_PATH}}`
+- **Branch:** `main` (or feature branch)
+- **Ports:** Frontend :{{FRONTEND_PORT}}, Backend :{{BACKEND_PORT}}
+- **Dev server:** {{DEV_SERVER_CMD}}
+- **Pre-commit:** ruff + bandit + gitleaks + (frontend: tsc + eslint)
+
+## Completed in this session ✓
+
+- ✓ Bootstrap: claude-code project template applied (new project)
+
+## 🎯 Next Task Brief
+
+**Task:** Start the project — first endpoint / component / feature
+
+**Implementation:**
+- [ ] Create the first module
+- [ ] Add test fixtures
+- [ ] CI/CD pipeline (optional)
+
+**Setup:**
+- `pip install -r requirements-dev.txt` (Python)
+- `pre-commit install` (activate git hook)
+- Database, env vars, etc.
+
+**Verification:**
+- Dev server starts
+- First test passes
+- Pre-commit clean
+
+## Next Up (backlog)
+
+- [ ] Auth system
+- [ ] DB schema
+- [ ] Deploy pipeline
+
+## Discovered (out of scope)
+
+(empty — new project)
+
+## Rules / Reminders
+
+- `.env` and `secrets/` **DO NOT TOUCH**
+- New file/module → add `<folder>/index.md`
+- Close the session with `/session-end`, then `/clear`
+
+---
+
+Last updated: {{DATE}}

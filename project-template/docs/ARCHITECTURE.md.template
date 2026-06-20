@@ -1,0 +1,32 @@
+# {{PROJECT_NAME}} — Mimari (Klasör Ağacı)
+
+> CLAUDE.md'de özet, burada detay. Lazy load.
+
+---
+
+## Top-Level Yapı
+
+```
+{{PROJECT_NAME}}/
+├── CLAUDE.md
+├── pyproject.toml
+├── requirements.txt
+├── .claude/
+│   ├── settings.json
+│   └── rules/
+├── scripts/                 ← Hook script'leri
+├── tasks/                   ← Claude memory
+│   ├── handoff.md, todo.md, lessons.md, decisions.md, audit.md
+│   ├── refs/                ← Referans dosyalar
+│   └── archive/             ← Tarihsel
+├── docs/                    ← Operational docs
+└── [modüller — projeye göre]
+```
+
+## Kritik Akışlar
+
+[Veri akışı, request flow, deploy pipeline]
+
+## Önemli Sabitler
+
+[ENV vars, ports, thresholds]
