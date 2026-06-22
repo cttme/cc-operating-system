@@ -21,14 +21,12 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 DEST_SKILLS="$REPO_ROOT/home/skills"
 DEST_SCRIPTS="$REPO_ROOT/home/scripts"
-DEST_CLAUDE_MD="$REPO_ROOT/home/CLAUDE.md.example"
 DEST_TEMPLATE="$REPO_ROOT/project-template"
 DEST_DOCS="$REPO_ROOT/docs"
 DEST_PORTABILITY="$REPO_ROOT/PORTABILITY.md"
 
 SRC_SKILLS="$HOME_CLAUDE/skills"
 SRC_SCRIPTS="$HOME_CLAUDE/scripts"
-SRC_CLAUDE_MD="$HOME_CLAUDE/CLAUDE.md"
 SRC_TEMPLATE="$HOME_CLAUDE/templates/project-bootstrap"
 SRC_MANTIKLI_SKILLS="$MANTIKLI_CLAUDE/skills"
 SRC_PORTABILITY="$MANTIKLI_CLAUDE/rules/PORTABILITY.md"
@@ -127,12 +125,14 @@ find "$DEST_SCRIPTS" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null |
 find "$DEST_SCRIPTS" -name "*.bak-*" -exec rm -rf {} + 2>/dev/null || true
 
 # =========================================================================
-# c. home/CLAUDE.md.example
+# c. home/CLAUDE.md.example — repo-owned, NOT auto-synced.
 # =========================================================================
-echo "--> [c] home/CLAUDE.md.example"
-if [ -f "$SRC_CLAUDE_MD" ]; then
-    cp "$SRC_CLAUDE_MD" "$DEST_CLAUDE_MD"
-fi
+# The repo's CLAUDE.md.example is a deliberately GENERICIZED English template
+# (titled EXAMPLE, with install.sh notes). $SRC_CLAUDE_MD is the maintainer's
+# raw personal ~/.claude/CLAUDE.md (language-specific, contains private prefs),
+# so a verbatim copy would (a) revert the genericization and (b) leak personal
+# config into the repo. Edit CLAUDE.md.example by hand — same as PORTABILITY.md.
+echo "--> [c] home/CLAUDE.md.example (repo-owned — skipped, not auto-synced)"
 
 # =========================================================================
 # d. project-template/
