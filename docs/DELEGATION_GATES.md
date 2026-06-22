@@ -39,6 +39,31 @@ These are expensive-to-impossible to undo; never do them unprompted:
   may be cached/indexed even if deleted.
 - **Secrets / credentials** — never read, edit, or move `.env*`, `secrets/`.
 
+## 🔁 Unattended runs (loops / scheduled agents) — the ⚠️ tier collapses
+
+The three tiers above assume a human is **in the room** to answer the ⚠️ middle tier.
+An unattended run (a `/loop`, a scheduled/cron agent, a background worktree) has nobody
+to ask — so before automating *any* task, resolve the middle tier in advance:
+
+- **Every ⚠️ "ask-first" action must be pre-decided** into either ✅ auto-approve (you
+  accept the blast radius unwatched) or 🚫 hard-stop-and-queue (the loop pauses, writes
+  to its state file, and waits). There is no "ask" at 3am — silence is not consent.
+- **Loop-worthiness gate — all four must hold, or keep it a manual prompt:** (1) the task
+  **repeats** (≥ weekly), (2) an **automated check can reject** bad output (test / type /
+  build / lint — *not* a second agent's opinion), (3) the agent can **run the work
+  end-to-end**, (4) **"done" is objective**, not a judgment call. Miss one → manual.
+- **Two mandatory exits:** success (verified by an *independent* checker, never the maker)
+  **and** a hard cap (iteration / token / time). A loop with only the success exit is the
+  Ralph-Wiggum failure — it bills in silence on a half-done job.
+- **Never loop one-way-door work** (schema, public API, auth, payments, published URLs,
+  architecture). Those stay in the 🚫 tier *with* a human, always.
+- **Build order:** one reliable manual run → make it a skill → add gate + stop → *then*
+  schedule. Scheduling something not yet reliable by hand is how loops fail while you sleep.
+
+> Note: a project's *ops* cron (DB backups, vacuums, restore drills) is data/infra
+> maintenance, **not** an agentic loop — this section governs only runs where an agent
+> finds work, acts, and decides the next move on its own.
+
 ---
 
 ## Principle

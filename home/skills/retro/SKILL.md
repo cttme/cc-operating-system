@@ -33,6 +33,21 @@ Read the per-model split. Flag: **Opus-on-mechanical** spend (top-tier model doi
 bookkeeping the `model_routing_hint` hook should have caught), and **resume-tax %**
 (cache_creation share). One-line verdict: is the model mix justified by the work mix?
 
+### Adım 1b — Cost per accepted change (outcome, not input)
+Token split (§1) is an **input** metric — it says where money went, not whether it
+bought anything. Pair it with the **outcome** metric the loop-engineering literature
+names as the one almost nobody tracks: **cost per accepted change** + **reject rate**.
+```bash
+git log --since="<window>" --oneline | wc -l   # changes that shipped (denominator)
+# rejected = reverts/redos: cross-ref Adım 2's rework scan
+```
+- **cost/accepted-change** = in-window spend ÷ commits that *stuck* (not reverted/redone).
+  Rising trend = the workflow is spending more to land the same amount of work.
+- **reject rate** = (redo+revert) ÷ total. Above ~50% means you're doing review work the
+  process should have prevented — that's a rules/gate gap (→ §5), not a model-tier knob.
+One-line verdict: is spend-per-landed-change flat or falling? If rising, §2 (rework) and
+§5 (lessons→rules) are where the leak is.
+
 ### Adım 2 — Rework review
 ```bash
 git log --since="<window>" --oneline | grep -iE "revert|redo|fix.*again|re-|retry" | head
