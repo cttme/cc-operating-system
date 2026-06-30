@@ -82,7 +82,10 @@ for d in "$DEST_SKILLS"/*/; do
     fi
 done
 
-# Also copy cave/, normal/, review.md from Mantikli's local skills
+# Also copy cave/, normal/, review/ from Mantikli's local skills.
+# review was converted from a flat review.md to Agent-Skill dir form
+# (review/SKILL.md, R13 spillover) — prefer the dir, fall back to the
+# legacy flat file so an un-migrated project still exports.
 if [ -d "$SRC_MANTIKLI_SKILLS/cave" ]; then
     cp -r "$SRC_MANTIKLI_SKILLS/cave" "$DEST_SKILLS/cave"
     SKILLS_COPIED=$((SKILLS_COPIED + 1))
@@ -91,7 +94,10 @@ if [ -d "$SRC_MANTIKLI_SKILLS/normal" ]; then
     cp -r "$SRC_MANTIKLI_SKILLS/normal" "$DEST_SKILLS/normal"
     SKILLS_COPIED=$((SKILLS_COPIED + 1))
 fi
-if [ -f "$SRC_MANTIKLI_SKILLS/review.md" ]; then
+if [ -d "$SRC_MANTIKLI_SKILLS/review" ]; then
+    cp -r "$SRC_MANTIKLI_SKILLS/review" "$DEST_SKILLS/review"
+    SKILLS_COPIED=$((SKILLS_COPIED + 1))
+elif [ -f "$SRC_MANTIKLI_SKILLS/review.md" ]; then
     cp "$SRC_MANTIKLI_SKILLS/review.md" "$DEST_SKILLS/review.md"
 fi
 
