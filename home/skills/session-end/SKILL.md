@@ -84,6 +84,8 @@ Bu sayede her session'ın bittiği nokta markdown olarak tarihsel iz bırakır.
 
 **Task:** [Topic/Item title — from Step 2]
 
+**Budget tier:** local | Sonnet | Opus — the recommended execution tier for this task (delegate-by-default: Sonnet unless it's a one-way door or needs algo / data-integrity / architectural reasoning → Opus; trivial single-token → local).
+
 **Implementation:**
 - [Step 1 — from Step 2]
 - [Step 2]
@@ -179,6 +181,19 @@ fi
 If ≥14 days (or never) **and** this session shipped a milestone → add a one-line
 "consider /retro" to the handoff's Next Up. Don't force it on a trivial session.
 
+### Adım 6.6: Routing-Quality Scorecard (R6, observational)
+
+```bash
+python scripts/routing_quality.py
+```
+
+Purely observational — replays this session's trajectory from `tasks/audit.md`
+and reports whether the model tier chosen matched the work (mechanical-on-Opus
+waste %, delegated calls, cheap-tier calls). **Never blocks; never gates
+session-end.** Include the printed scorecard line verbatim in the session-end
+summary output (Adım "Final Çıktı"). If waste % is high, note it as a lesson
+candidate for Adım 4 — don't act on it unilaterally, just surface it.
+
 ### Adım 7: Fallback Starter Dosyası (opsiyonel)
 
 Fallback mechanism — if /onboard isn't used, for copy-paste:
@@ -223,6 +238,7 @@ If /onboard can't read the brief for some unknown reason, paste the following:
   ✓ lessons.md: +[N] new lesson(s)
   ✓ decisions.md: +[N] new decision(s)
   ✓ Rotation: [Needed / Not needed]
+  ✓ Routing quality: [scorecard line from scripts/routing_quality.py]
   ✓ Fallback starter: ~/.claude/plans/[proj]-next-session-starter.md
 ───────────────────────────────────────────────────
   NOW:

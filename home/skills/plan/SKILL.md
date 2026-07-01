@@ -45,6 +45,7 @@ A plan is worth its overhead for **meaningful, multi-step, reversible** work. It
 4. **Recorded dissent** — keep any objection (a QA/Security concern is a veto on one-way
    doors, advisory on two-way); don't silently drop it.
 5. **Model tier** used to plan + recommended for execution.
+6. **Budget tier:** local | Sonnet | Opus — the recommended execution tier for this task (delegate-by-default: Sonnet unless it's a one-way door or needs algo / data-integrity / architectural reasoning → Opus; trivial single-token → local).
 
 ## Finish
 
