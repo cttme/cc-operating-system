@@ -47,6 +47,21 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 HOME_CLAUDE="${HOME_CLAUDE:-$HOME/.claude}"
 DATE_SUFFIX="$(date +%Y-%m-%d)"
 
+# --- SEC-P5: source-machine guard ----------------------------------------
+# Running the installer ON the machine that produces this snapshot would
+# overwrite the live, authoritative ~/.claude with the repo's (possibly
+# older) copy — resurrecting already-fixed defects (self-rollback, SEC-F5).
+# The live source project's .claude dir is the cheap tell. --force overrides
+# deliberately; --dry-run is always allowed (it touches nothing).
+MANTIKLI_CLAUDE="${MANTIKLI_CLAUDE:-/d/cc/Mantikli/.claude}"
+if [ "$DRY_RUN" -eq 0 ] && [ "$FORCE" -eq 0 ] && [ -d "$MANTIKLI_CLAUDE" ]; then
+    echo "REFUSED — this looks like the SOURCE machine ($MANTIKLI_CLAUDE exists)." >&2
+    echo "Installing here would overwrite the live authoritative ~/.claude with the" >&2
+    echo "repo snapshot (self-rollback of newer live fixes). Run with --dry-run to" >&2
+    echo "inspect, or --force only if you really mean to roll the live setup back." >&2
+    exit 1
+fi
+
 SRC_SKILLS="$REPO_ROOT/home/skills"
 SRC_SCRIPTS="$REPO_ROOT/home/scripts"
 SRC_CLAUDE_MD="$REPO_ROOT/home/CLAUDE.md.example"

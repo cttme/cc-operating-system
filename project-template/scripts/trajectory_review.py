@@ -29,6 +29,22 @@ repeated PRINT is gated.
 
 Never raises on the hook path — any internal error is noted to the same
 sidecar log trajectory_log.py uses, and the process still exits 0.
+
+=== Schema versioning (A-P4) ===
+
+The row field list (ts/sess/model/stage/tool/args) is documented ONCE, in
+scripts/trajectory_log.py (the writer) — see its module docstring "Schema"
+section. This reader does not keep its own copy of the field list; it only
+asserts the SCHEMA_VERSION marker trajectory_log.py writes matches what this
+reader supports (SUPPORTED_SCHEMA_VERSION below).
+
+- Marker missing entirely (predates versioning) → treated as legacy v1, but
+  `check_schema()` returns a one-line notice — NOT a hard failure (a hard
+  fail on "no marker yet" would break every run until the writer's next
+  append adds one).
+- Marker present but a DIFFERENT version than SUPPORTED_SCHEMA_VERSION →
+  hard failure: `check_schema()` signals a mismatch and the CLI exits
+  nonzero, naming found vs. supported.
 """
 
 from __future__ import annotations
@@ -49,9 +65,31 @@ try:
 except Exception:  # pragma: no cover - defensive: import must never break the hook
     fired_before = None  # type: ignore[assignment]
 
+# Schema marker helpers — SSOT is trajectory_log.py (the writer); this reader
+# does not keep its own copy of the field list, only the version check.
+# Imported defensively (same pattern as hook_latch above): an import failure
+# must never break a hook, so fall back to a local, minimally-equivalent
+# regex/version rather than raising.
+try:
+    from scripts.trajectory_log import SCHEMA_MARKER_RE
+except Exception:  # pragma: no cover - defensive: import must never break the hook
+    SCHEMA_MARKER_RE = re.compile(r"^<!--\s*schema=(?P<version>\S+)\s+fields=\S+\s*-->\s*$")
+
+# The schema version THIS reader knows how to interpret. Deliberately a
+# reader-owned literal, NOT imported from the writer: if it aliased the
+# writer's SCHEMA_VERSION, bumping the writer to v2 would auto-bump this
+# claim while the reader's parsing code stayed v1-shaped — the version gate
+# would pass exactly when it must fail. A writer bump and a reader bump are
+# two independent, explicit edits.
+SUPPORTED_SCHEMA_VERSION = "v1"
+
 AUDIT_PATH_ENV = "TRAJECTORY_AUDIT_PATH"
 DEFAULT_AUDIT_PATH = "tasks/audit.md"
-ERROR_LOG_PATH = "tasks/.trajectory_errors.log"
+
+# Env-overridable (same pattern as TRAJECTORY_AUDIT_PATH) so tests never
+# append to the real sidecar log — see posttooluse_qa_guard.py's identical
+# TRAJECTORY_ERRORS_PATH convention.
+ERROR_LOG_PATH = os.environ.get("TRAJECTORY_ERRORS_PATH") or "tasks/.trajectory_errors.log"
 LATCH_KEY = "trajectory_review-hook"
 
 # Canonical pipeline stages (.claude/rules/thinking-pipeline.md).
@@ -92,6 +130,69 @@ def _log_error(message: str) -> None:
             fh.write(f"[{ts}] {message}\n")
     except Exception:
         pass
+
+
+# === Section: Schema check ===
+
+
+def _find_schema_marker(audit_path: Path) -> str | None:
+    """Scan the file's first few lines for a schema marker. None if absent.
+
+    Mirrors trajectory_log._find_schema_marker exactly (bounded head-read,
+    same regex) — duplicated rather than imported across the two modules'
+    private helpers to avoid a fragile cross-import of an underscore-name;
+    the public contract (SCHEMA_MARKER_RE) IS shared via the import above.
+    """
+    try:
+        if not audit_path.is_file():
+            return None
+        with audit_path.open(encoding="utf-8", errors="replace") as fh:
+            for i, raw in enumerate(fh):
+                if i >= 15:
+                    break
+                m = SCHEMA_MARKER_RE.match(raw.strip())
+                if m:
+                    return m.group("version")
+    except Exception:
+        return None
+    return None
+
+
+def check_schema(audit_path: Path) -> dict:
+    """Assert the audit.md schema marker matches SUPPORTED_SCHEMA_VERSION.
+
+    Returns {"ok": bool, "found": str | None, "notice": str | None}:
+      - marker missing            -> ok=True,  notice="legacy (no schema marker...)"
+      - marker == supported       -> ok=True,  notice=None
+      - marker present, mismatch  -> ok=False, notice="schema mismatch: found=<x> supported=<y>"
+
+    Callers: a missing marker is NOT a hard failure (the real audit.md
+    predates versioning until the writer's first post-change append adds the
+    marker) — only a VERSION MISMATCH is. This function never raises.
+    """
+    try:
+        found = _find_schema_marker(audit_path)
+    except Exception:
+        found = None
+    if found is None:
+        return {
+            "ok": True,
+            "found": None,
+            "notice": (
+                f"[trajectory schema] no schema marker found in {audit_path} — "
+                f"treating as legacy {SUPPORTED_SCHEMA_VERSION} (predates schema versioning)"
+            ),
+        }
+    if found != SUPPORTED_SCHEMA_VERSION:
+        return {
+            "ok": False,
+            "found": found,
+            "notice": (
+                f"[trajectory schema] MISMATCH: {audit_path} marker=schema={found} "
+                f"but this reader supports schema={SUPPORTED_SCHEMA_VERSION}"
+            ),
+        }
+    return {"ok": True, "found": found, "notice": None}
 
 
 def _parse_lines(audit_path: Path) -> list[dict]:
@@ -208,6 +309,26 @@ def main() -> int:
     hook_mode = "--hook" in sys.argv[1:]
     session_id = None
     try:
+        audit_path = _audit_path()
+        schema = check_schema(audit_path)
+        if schema["notice"]:
+            # Always printed (both modes) — a legacy-marker notice or a
+            # mismatch warning must be visible; hook_mode never suppresses it,
+            # it only decides whether it's ALSO fatal (see below).
+            print(schema["notice"], file=sys.stderr)
+        if not schema["ok"]:
+            _log_error(
+                f"trajectory_review schema mismatch: found={schema['found']!r} "
+                f"supported={SUPPORTED_SCHEMA_VERSION!r}"
+            )
+            if not hook_mode:
+                # Manual/CLI invocation: fail loud, per A-P4 done-gates — a
+                # reader must not silently replay rows under an unsupported
+                # schema. A hook invocation must never break the session, so
+                # this branch only fires for a direct `python
+                # scripts/trajectory_review.py` run (no --hook).
+                return 1
+
         if hook_mode:
             payload = _read_hook_payload()
             raw_session_id = payload.get("session_id") or payload.get("sessionId")

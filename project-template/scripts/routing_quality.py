@@ -31,7 +31,25 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from scripts.model_routing_hint import MECHANICAL_SKILLS  # noqa: E402
-from scripts.trajectory_review import _audit_path, _log_error, _parse_lines  # noqa: E402
+from scripts.trajectory_review import (  # noqa: E402
+    SUPPORTED_SCHEMA_VERSION,
+    _audit_path,
+    _log_error,
+    _parse_lines,
+    check_schema,
+)
+
+# NOTE: this scorer can only score the latest/targeted session in ONE
+# audit.md (score() / score_all() below) — it does not roll up multiple
+# sessions or multiple audit.md files into one report. A `--session <id>`
+# rollup across sessions/files is R5's future job; this is a placeholder
+# comment only, do NOT build that here.
+
+# Schema field list is documented ONCE in scripts/trajectory_log.py (the
+# writer's module docstring "Schema" section) — this module does not keep
+# its own copy. Version compatibility is asserted via
+# trajectory_review.check_schema()/SUPPORTED_SCHEMA_VERSION (imported above),
+# not re-implemented here.
 
 # === Section: Classifiers ===
 
@@ -368,6 +386,26 @@ def _safe_print(text: str) -> None:
 
 def main() -> int:
     try:
+        audit_path = _audit_path()
+        schema = check_schema(audit_path)
+        if schema["notice"]:
+            _safe_print(schema["notice"])
+        if not schema["ok"]:
+            _log_error(
+                f"routing_quality schema mismatch: found={schema['found']!r} "
+                f"supported={SUPPORTED_SCHEMA_VERSION!r}"
+            )
+            # A hook invocation (stdin piped, e.g. a Stop hook) must never
+            # break the session — notice only, still exit 0. A manual/CLI
+            # run (interactive stdin, or --session/--all given explicitly)
+            # fails loud: a scorecard must not silently replay rows under an
+            # unsupported schema and report numbers as if they were valid.
+            is_manual_cli = (sys.stdin is None or sys.stdin.isatty()) or bool(
+                sys.argv[1:]
+            )
+            if is_manual_cli:
+                return 1
+
         opts = _parse_argv(sys.argv[1:])
 
         if opts["all"]:

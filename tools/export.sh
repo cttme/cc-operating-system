@@ -9,6 +9,13 @@
 # are themselves free of project-specific strings, so this script no longer
 # rewrites copied content — it only copies + validates.
 #
+# FIREWALL (SEC-P7, 2026-07-03): ~/.claude/memory/, ~/.claude/plans/,
+# ~/.claude/projects/ (session transcripts), and live tasks/ state
+# (handoff/lessons/decisions/audit) are NEVER export sources — they carry
+# PII, business data, and session content. This is true today because they
+# are not in the source list below; keep it true BY RULE: do not add them.
+# If something in there is worth publishing, genericize it into docs/ by hand.
+#
 # Safe to re-run repeatedly: destination subtrees are wiped (rm -rf) before
 # each copy.
 #

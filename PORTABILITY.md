@@ -74,3 +74,7 @@
    Don't cargo-cult another project's matcher/scraper rules onto an unrelated codebase.
 4. **Re-run `/retro`** after a few milestones to confirm the pipeline is actually earning
    its keep on your project — portability does not imply value.
+
+> **Firewall (SEC-P7):** `~/.claude/memory/`, `~/.claude/plans/`, session transcripts
+> (`~/.claude/projects/`), and live `tasks/` state are **never** export sources for this
+> repo — they carry PII, business data, and session content. See `tools/export.sh` header.
