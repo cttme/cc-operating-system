@@ -8,7 +8,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 
 `/clear` çekmeden ÖNCE çağrılır. **Handoff'ı standart formatta günceller** ki sonraki session sadece `/onboard` + "evet" ile başlayabilsin.
 
-## Akış (7 adım)
+## Akış (6 adım)
 
 ### Adım 1: Session Özeti
 
@@ -124,9 +124,19 @@ Last updated: [YYYY-MM-DD HH:MM]
 
 Bu session'da yeni öğrenilen tuzak/pattern var mı?
 
+Use the FULL field template from `tasks/lessons.md` "## Format" block (SSOT — do not
+use a shortened form). Fields as of 2026-07-03 (canary 2026-06-15 + S6 catch-ledger):
+
 ```markdown
 ## [YYYY-MM-DD]: [Topic]
-**Error:** ... **Cause:** ... **Rule:** ... **Count:** 1
+**Error:** ... **Cause:** ... **Rule:** ...
+**Caught-at:** design|review|pre-commit|test|prod|late
+**Impact:** high|med|low
+**Fix-type:** structural | memory
+**Mechanism:** rule name | hook | doublecheck | pre-commit | test | user-report | none
+**Rule-birth:** post | pre
+**Severity:** trivial | rework | shipped-bug
+**Count:** 1
 ```
 
 `tasks/lessons.md` SONUNA **append** (overwrite yasak).
@@ -194,39 +204,6 @@ session-end.** Include the printed scorecard line verbatim in the session-end
 summary output (Adım "Final Çıktı"). If waste % is high, note it as a lesson
 candidate for Adım 4 — don't act on it unilaterally, just surface it.
 
-### Adım 7: Fallback Starter Dosyası (opsiyonel)
-
-Fallback mechanism — if /onboard isn't used, for copy-paste:
-
-```bash
-# Eski starter'ı yedek
-mkdir -p ~/.claude/plans/archive
-if [ -f ~/.claude/plans/<project>-next-session-starter.md ]; then
-  mv ~/.claude/plans/<project>-next-session-starter.md \
-     ~/.claude/plans/archive/<project>-starter-$(date +%Y-%m-%d-%H%M).md
-fi
-```
-
-New starter file (the handoff.md content I'd want, in case the user pastes it):
-
-```markdown
-# [Project] Start New Session
-
-## RECOMMENDED: start with one message
-
-```
-/onboard
-```
-
-/onboard will find and show the Next Task Brief from handoff.md. Say "yes" to begin.
-
-## ALTERNATIVE: manual brief
-
-If /onboard can't read the brief for some unknown reason, paste the following:
-
-[copy the "🎯 Next Task Brief" section from handoff.md here]
-```
-
 ## Final Çıktı
 
 ```
@@ -239,7 +216,6 @@ If /onboard can't read the brief for some unknown reason, paste the following:
   ✓ decisions.md: +[N] new decision(s)
   ✓ Rotation: [Needed / Not needed]
   ✓ Routing quality: [scorecard line from scripts/routing_quality.py]
-  ✓ Fallback starter: ~/.claude/plans/[proj]-next-session-starter.md
 ───────────────────────────────────────────────────
   NOW:
     1. /clear
@@ -251,7 +227,7 @@ If /onboard can't read the brief for some unknown reason, paste the following:
 ## Kurallar
 
 - **Append-only:** lessons.md, decisions.md
-- **Overwrite OK:** handoff.md, next-session-starter.md
+- **Overwrite OK:** handoff.md
 - **🎯 Next Task Brief BOŞ KALMAMALI** — eğer kullanıcı atlasa, en azından handoff'taki "Sıradaki"den minimum bilgi al
 - **Token-efficient:** head/tail, full read minimum
 - **Çift kontrol:** Kullanıcıdan onay al (session özeti, sıradaki iş)

@@ -60,13 +60,15 @@ echo "--> [a] home/skills/"
 rm -rf "$DEST_SKILLS"
 mkdir -p "$DEST_SKILLS"
 
-# Copy from ~/.claude/skills/ excluding audit-*, __pycache__, *.bak-*
+# Copy from ~/.claude/skills/ excluding archive/ (retired skills — audit-*
+# moved there 2026-07-03; adopters must not inherit dead ceremony),
+# audit-* (defense-in-depth if one reappears flat), __pycache__, *.bak-*
 if [ -d "$SRC_SKILLS" ]; then
     for entry in "$SRC_SKILLS"/*; do
         [ -e "$entry" ] || continue
         base="$(basename "$entry")"
         case "$base" in
-            audit-*|__pycache__|*.bak-*)
+            archive|audit-*|__pycache__|*.bak-*)
                 continue
                 ;;
         esac
@@ -234,7 +236,7 @@ if [ -d "$SRC_SKILLS" ]; then
         [ -e "$entry" ] || continue
         base="$(basename "$entry")"
         case "$base" in
-            audit-*|__pycache__|*.bak-*)
+            archive|audit-*|__pycache__|*.bak-*)
                 continue
                 ;;
         esac

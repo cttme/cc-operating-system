@@ -12,26 +12,45 @@ Yeni session açıldığında veya `/clear` sonrası, **minimum token ile** duru
 
 ### 0. RESUME DETECTION (KRİTİK — önce bu!)
 
-Eğer bu fresh bir session DEĞİL de RESUME ise (transcript zaten büyük), kullanıcıya
-**hemen uyarı ver ve dur**. Resume = cache_creation tax = pahalı.
+**Auto-answers resume-vs-fresh itself** — no fallback starter file to lean on
+anymore (killed, UX-P5 2026-07-03). Size alone is ambiguous: a big transcript
+file can be *this* session being resumed (expensive, cache_creation tax) OR it
+can be a **previous** session's leftover file that just happens to still be the
+newest by mtime (harmless — this is actually a fresh session). Disambiguate with
+**size + mtime age** together:
 
 ```bash
-# En son aktif transcript'in boyutunu bul
+# En son aktif transcript'in boyutu VE yaşı (mtime) bul
 TRANSCRIPT=$(ls -t ~/.claude/projects/*/[0-9a-f]*.jsonl 2>/dev/null | head -1)
 if [ -n "$TRANSCRIPT" ]; then
   SIZE_KB=$(($(stat -c '%s' "$TRANSCRIPT" 2>/dev/null || stat -f '%z' "$TRANSCRIPT") / 1024))
-  if [ $SIZE_KB -gt 500 ]; then
-    echo "🚨 RESUME ALGILANDI: Transcript $SIZE_KB KB"
-    echo "   Eğer bu fresh session DEĞİLSE, devam etmek pahalı (cache_creation tax)."
+  MTIME=$(stat -c '%Y' "$TRANSCRIPT" 2>/dev/null || stat -f '%m' "$TRANSCRIPT")
+  AGE_SEC=$(( $(date +%s) - MTIME ))
+
+  if [ "$SIZE_KB" -le 500 ]; then
+    # Branch 1: small → fresh, proceed silently
+    :
+  elif [ "$AGE_SEC" -gt 600 ]; then
+    # Branch 2: big but old (>10min untouched) → it's a PREVIOUS session's
+    # leftover file, not this one → proceed WITHOUT asking, just note it
+    echo "ℹ Newest transcript is ${SIZE_KB}KB but last touched $((AGE_SEC/60))min ago — treating as a prior session's file, proceeding fresh."
+  else
+    # Branch 3: big AND recent (<=10min) → ambiguous, could be THIS session
+    # being resumed → only this branch asks
+    echo "🚨 RESUME ALGILANDI: Transcript ${SIZE_KB}KB, ${AGE_SEC}s önce güncellendi"
+    echo "   Bu fresh session DEĞİLSE, devam etmek pahalı (cache_creation tax)."
     echo "   Öneri: /session-end → /clear → yeni session aç → /onboard"
   fi
 fi
 ```
 
-Eğer transcript > 500 KB ise:
-- Stop ve kullanıcıya sor: "Bu session resume mu (eski) yoksa fresh mi (yeni)?"
-- Resume ise: `/session-end` + `/clear` öner
-- Fresh ise: devam et (Adım 1'e geç)
+- **Branch 1 (small, ≤500KB):** fresh, proceed silently (Adım 1'e geç) — unchanged.
+- **Branch 2 (big, but mtime >~10min old):** that transcript belongs to a session
+  that already closed — proceed WITHOUT asking, just print the info line above,
+  then continue to Adım 1.
+- **Branch 3 (big AND mtime ≤~10min):** genuinely ambiguous — this is the ONLY
+  branch that stops and asks: "Bu session resume mu (eski) yoksa fresh mi
+  (yeni)?" Resume ise `/session-end` + `/clear` öner; fresh ise Adım 1'e geç.
 
 ### 1. Durum Topla
 
@@ -168,5 +187,5 @@ Sonra kullanıcının "evet" / "redirect" / "planla" cevabını bekle.
 ## İlgili
 
 - `/session-end` — pair skill, çıkışta brief'i yazar
-- `tasks/handoff.md` — single source of truth (Next Task Brief bölümü ile)
-- `~/.claude/plans/<proj>-next-session-starter.md` — fallback (eski mekanizma, /session-end overwrite eder)
+- `tasks/handoff.md` — single source of truth (Next Task Brief bölümü ile) — the ONLY starter mechanism (UX-P5 2026-07-03: fallback starter file killed)
+- `~/.claude/plans/archive/` — historical location of the old next-session-starter.md files (dead mechanism, kept for reference only)
