@@ -38,6 +38,9 @@ NESTED_REMOVED=0
 SED_APPLIED=0
 SED_NOT_FOUND=0
 GITLEAKS_STATUS="not run"
+MANIFEST_STATUS="not run"
+PARITY_STATUS="not run"
+STALE_COUNT=0
 
 echo "==> Exporting workflow OS snapshot into $REPO_ROOT"
 
@@ -158,7 +161,8 @@ if [ -d "$SRC_TEMPLATE" ]; then
            "$DEST_TEMPLATE/.preflight" \
            "$DEST_TEMPLATE/BACKPORT.md" \
            "$DEST_TEMPLATE/ENGINEERING_PATTERNS.md" \
-           "$DEST_TEMPLATE/DELEGATION_GATES.md"
+           "$DEST_TEMPLATE/DELEGATION_GATES.md" \
+           "$DEST_TEMPLATE/STATUS.md"
 fi
 
 # Clean any nested .git / __pycache__ / *.bak-* / .preflight that came along
@@ -179,6 +183,11 @@ if [ -f "$SRC_TEMPLATE/DELEGATION_GATES.md" ]; then
     cp "$SRC_TEMPLATE/DELEGATION_GATES.md" "$DEST_DOCS/DELEGATION_GATES.md"
 fi
 # BACKPORT.md deliberately dropped — Mantikli-internal, never copied anywhere.
+# STATUS.md deliberately dropped — a maintainer note ABOUT copy B itself
+# (freeze status, authoritative-source pointers); shipping it into
+# project-template/ would tell project #2's Claude the wrong thing about
+# ITS OWN authoritativeness. See STATUS.md's own text + decisions.md
+# 2026-07-03 "Council — copy-B topology".
 
 # =========================================================================
 # f. PORTABILITY.md — repo-owned, NOT auto-synced.
@@ -231,6 +240,318 @@ if [ -f "$ASK_LOCAL_SKILL" ] && grep -q 'düzhesap' "$ASK_LOCAL_SKILL"; then
 else
     SED_NOT_FOUND=$((SED_NOT_FOUND + 1))
     echo "    [NOT FOUND] ask-local/SKILL.md: düzhesap parenthetical"
+fi
+
+# =========================================================================
+# g2. export manifest + post-conditions (A-P1 core + O6 + council rider 2)
+# =========================================================================
+# Three independent checks, in order of severity:
+#   1. Manifest + post-conditions   — FAIL loud, named misses, no `|| true`.
+#   2. Template-hook-diff parity    — FAIL loud (O6+SEC-P4): the template's
+#      secret gate must be a superset-or-equal of the live gate.
+#   3. Rider 2 — staleness WARN     — WARN-ONLY, never fails the export.
+#
+# All three read the DESTINATION (post-copy state), matching what a fresh
+# consumer of this repo actually receives — not the source, which could
+# theoretically differ from what section a/b/d actually landed.
+echo "--> [g2] export manifest + post-conditions"
+
+MANIFEST_FILE="$SCRIPT_DIR/export-manifest.txt"
+MANIFEST_FAILED=0
+declare -a MANIFEST_MISSING=()
+
+# --- 1a. Expected skills (section a) -------------------------------------
+declare -a EXPECTED_SKILLS=()
+if [ -d "$SRC_SKILLS" ]; then
+    for entry in "$SRC_SKILLS"/*; do
+        [ -e "$entry" ] || continue
+        base="$(basename "$entry")"
+        case "$base" in
+            audit-*|__pycache__|*.bak-*)
+                continue
+                ;;
+        esac
+        EXPECTED_SKILLS+=("$base")
+    done
+fi
+for extra in cave normal; do
+    if [ -d "$SRC_MANTIKLI_SKILLS/$extra" ]; then
+        EXPECTED_SKILLS+=("$extra")
+    fi
+done
+if [ -d "$SRC_MANTIKLI_SKILLS/review" ]; then
+    EXPECTED_SKILLS+=("review")
+elif [ -f "$SRC_MANTIKLI_SKILLS/review.md" ]; then
+    EXPECTED_SKILLS+=("review.md")
+fi
+
+for name in "${EXPECTED_SKILLS[@]}"; do
+    if [ ! -e "$DEST_SKILLS/$name" ]; then
+        MANIFEST_MISSING+=("[a home/skills] $name")
+        MANIFEST_FAILED=1
+    fi
+done
+
+# --- 1b. Expected scripts (section b) -------------------------------------
+declare -a EXPECTED_SCRIPTS=()
+if [ -d "$SRC_SCRIPTS" ]; then
+    for entry in "$SRC_SCRIPTS"/*; do
+        [ -e "$entry" ] || continue
+        base="$(basename "$entry")"
+        case "$base" in
+            __pycache__|*.bak-*)
+                continue
+                ;;
+        esac
+        EXPECTED_SCRIPTS+=("$base")
+    done
+fi
+
+for name in "${EXPECTED_SCRIPTS[@]}"; do
+    if [ ! -e "$DEST_SCRIPTS/$name" ]; then
+        MANIFEST_MISSING+=("[b home/scripts] $name")
+        MANIFEST_FAILED=1
+    fi
+done
+
+# --- 1d. Expected project-template files (section d) ----------------------
+declare -a EXPECTED_TEMPLATE=()
+if [ -d "$SRC_TEMPLATE" ]; then
+    while IFS= read -r rel; do
+        case "$rel" in
+            .git|.git/*|.preflight|.preflight/*|__pycache__|*/__pycache__|*/__pycache__/*)
+                continue
+                ;;
+            *.bak-*|*/.bak-*)
+                continue
+                ;;
+            BACKPORT.md|ENGINEERING_PATTERNS.md|DELEGATION_GATES.md|STATUS.md)
+                continue
+                ;;
+        esac
+        EXPECTED_TEMPLATE+=("$rel")
+    done < <(cd "$SRC_TEMPLATE" && find . -mindepth 1 -type f | sed 's|^\./||')
+fi
+
+for rel in "${EXPECTED_TEMPLATE[@]}"; do
+    if [ ! -f "$DEST_TEMPLATE/$rel" ]; then
+        MANIFEST_MISSING+=("[d project-template] $rel")
+        MANIFEST_FAILED=1
+    fi
+done
+
+# --- 1e. Expected docs (section e) ----------------------------------------
+declare -a EXPECTED_DOCS=()
+if [ -f "$SRC_TEMPLATE/ENGINEERING_PATTERNS.md" ]; then
+    EXPECTED_DOCS+=("ENGINEERING_PATTERNS.md")
+fi
+if [ -f "$SRC_TEMPLATE/DELEGATION_GATES.md" ]; then
+    EXPECTED_DOCS+=("DELEGATION_GATES.md")
+fi
+
+for name in "${EXPECTED_DOCS[@]}"; do
+    if [ ! -f "$DEST_DOCS/$name" ]; then
+        MANIFEST_MISSING+=("[e docs] $name")
+        MANIFEST_FAILED=1
+    fi
+done
+
+# --- 1r. Regression check: did a previously-expected SOURCE item vanish? --
+# The checks above only catch "source has it, destination doesn't." They
+# CANNOT catch "source itself lost a file" (e.g. an accidental rename) —
+# the freshly-derived expected list simply shrinks and nothing looks wrong.
+# Guard against that by diffing EVERY section's source-derived list against
+# that section's entries in the PREVIOUS run's committed manifest (read
+# before we overwrite it below). Anything the last run considered expected
+# that this run's SOURCE walk no longer produces is a source-side
+# regression — fail loud, name it. Covers ALL sections, not just d: the
+# 2026-07-01 review-skill silent drop was a section-a source-shape change,
+# so a d-only guard would miss the very incident class that motivated this.
+if [ -f "$MANIFEST_FILE" ]; then
+    check_source_regression() {
+        # $1 = exact manifest section header, $2 = label, $3 = name of the
+        # current source-derived expected array (bash nameref)
+        local header="$1" label="$2"
+        local -n _cur="$3"
+        local prev cur found
+        while IFS= read -r prev; do
+            found=0
+            for cur in "${_cur[@]}"; do
+                if [ "$cur" = "$prev" ]; then
+                    found=1
+                    break
+                fi
+            done
+            if [ "$found" -eq 0 ]; then
+                MANIFEST_MISSING+=("[$label SOURCE REGRESSION] $prev (in previous manifest, no longer derivable from source — accidental rename/delete? If the removal is INTENTIONAL, delete that line from tools/export-manifest.txt and re-run)")
+                MANIFEST_FAILED=1
+            fi
+        done < <(awk -v h="$header" '$0==h{flag=1;next}/^## /{flag=0}flag && NF' "$MANIFEST_FILE")
+    }
+    check_source_regression "## a. home/skills/"      "a home/skills"      EXPECTED_SKILLS
+    check_source_regression "## b. home/scripts/"     "b home/scripts"     EXPECTED_SCRIPTS
+    check_source_regression "## d. project-template/" "d project-template" EXPECTED_TEMPLATE
+    check_source_regression "## e. docs/"             "e docs"             EXPECTED_DOCS
+fi
+
+# --- Fail FIRST, before touching the manifest file on disk ---------------
+# The manifest on disk is the regression baseline the NEXT run reads (see
+# the 1r check above). If a failing run were allowed to overwrite it, the
+# bad/incomplete state would become the new "previous manifest" and poison
+# every subsequent run's regression check. So: check-and-abort happens
+# BEFORE the write, and a failing run leaves the last KNOWN-GOOD manifest
+# on disk untouched.
+if [ "$MANIFEST_FAILED" -eq 1 ]; then
+    MANIFEST_STATUS="FAIL"
+    echo ""
+    echo "============================================================"
+    echo "EXPORT ABORTED — manifest post-condition failed"
+    echo "  The following expected files/dirs are MISSING from the"
+    echo "  destination after copy:"
+    for m in "${MANIFEST_MISSING[@]}"; do
+        echo "    - $m"
+    done
+    echo "  (tools/export-manifest.txt left UNCHANGED — still reflects the"
+    echo "  last known-good export, so re-running after a fix compares"
+    echo "  against the correct baseline.)"
+    echo "============================================================"
+    exit 1
+fi
+
+# NOTE: the manifest file itself is NOT written here. It's deferred until
+# after ALL g2 hard-fail gates (this post-condition check AND the security
+# parity check below) have passed — see the write block just before section
+# h. Writing it here would persist a manifest reflecting a run that still
+# goes on to fail security parity, corrupting the NEXT run's regression
+# baseline (see the 1r comment above — this was caught empirically while
+# proving the done-gates: a parity-test artifact leaked into the manifest
+# because the write used to happen before the parity check).
+echo "    manifest post-conditions OK: ${#EXPECTED_SKILLS[@]} skills, ${#EXPECTED_SCRIPTS[@]} home scripts, ${#EXPECTED_TEMPLATE[@]} template files, ${#EXPECTED_DOCS[@]} docs"
+MANIFEST_STATUS="PASS"
+
+# --- 2. Template-hook-diff, security parity = HARD FAIL (O6+SEC-P4) -------
+# The template's secret gate must be a SUPERSET-OR-EQUAL of the live gate.
+# Concretely: if pretooluse_edit_guard.py (the live secret-gate script) is
+# wired in live Mantikli settings.json, it must ALSO be wired in the
+# post-copy template's settings.json.template — same matcher family
+# (PreToolUse Edit|Write). A template that dropped or never wired this
+# script would ship project #2 an editor with no secret-path block.
+echo "--> [g2] template-hook-diff (security parity)"
+
+LIVE_SETTINGS="$MANTIKLI_CLAUDE/settings.json"
+DEST_SETTINGS_TEMPLATE="$DEST_TEMPLATE/.claude/settings.json.template"
+
+SECRET_GATE_SCRIPT="pretooluse_edit_guard.py"
+
+if [ -f "$LIVE_SETTINGS" ]; then
+    LIVE_HAS_GATE="$(grep -c "scripts/${SECRET_GATE_SCRIPT}" "$LIVE_SETTINGS" || true)"
+else
+    LIVE_HAS_GATE=0
+fi
+
+if [ -f "$DEST_SETTINGS_TEMPLATE" ]; then
+    TEMPLATE_HAS_GATE="$(grep -c "scripts/${SECRET_GATE_SCRIPT}" "$DEST_SETTINGS_TEMPLATE" || true)"
+else
+    TEMPLATE_HAS_GATE=0
+fi
+
+if [ "${LIVE_HAS_GATE:-0}" -gt 0 ] && [ "${TEMPLATE_HAS_GATE:-0}" -eq 0 ]; then
+    PARITY_STATUS="FAIL"
+    echo ""
+    echo "============================================================"
+    echo "EXPORT ABORTED — security parity FAILED (O6 + SEC-P4)"
+    echo "  Live $LIVE_SETTINGS wires $SECRET_GATE_SCRIPT (the secret-path"
+    echo "  block gate) but the exported"
+    echo "  $DEST_SETTINGS_TEMPLATE does NOT wire it."
+    echo "  The template's secret gate must be a superset-or-equal of the"
+    echo "  live gate — project #2 must never ship with a weaker guard"
+    echo "  than the source project. Fix the template wiring, then re-run."
+    echo "============================================================"
+    exit 1
+fi
+
+# Content parity: wiring parity alone would still PASS while shipping a
+# STALE copy of the gate script — an older gate with fewer patterns is
+# exactly SEC-F4's "weakest historical gate" failure shape. Byte-equality
+# against the live script is the cheap superset-or-equal proxy; if the
+# template copy ever needs to deliberately diverge (e.g. genericization),
+# that divergence must come THROUGH this check as an explained change, not
+# around it.
+LIVE_GATE_SCRIPT="${MANTIKLI_CLAUDE%/.claude}/scripts/${SECRET_GATE_SCRIPT}"
+DEST_GATE_SCRIPT="$DEST_TEMPLATE/scripts/${SECRET_GATE_SCRIPT}"
+if [ "${LIVE_HAS_GATE:-0}" -gt 0 ] && [ -f "$LIVE_GATE_SCRIPT" ]; then
+    if ! cmp -s "$LIVE_GATE_SCRIPT" "$DEST_GATE_SCRIPT"; then
+        PARITY_STATUS="FAIL"
+        echo ""
+        echo "============================================================"
+        echo "EXPORT ABORTED — security parity FAILED (O6 + SEC-P4)"
+        echo "  Exported $DEST_GATE_SCRIPT"
+        echo "  is missing or differs from the live gate"
+        echo "  $LIVE_GATE_SCRIPT."
+        echo "  The template must never ship a stale/weaker secret gate."
+        echo "  Fix: refresh copy B's scripts/$SECRET_GATE_SCRIPT from the"
+        echo "  live version, then re-run."
+        echo "============================================================"
+        exit 1
+    fi
+fi
+
+if [ "${LIVE_HAS_GATE:-0}" -gt 0 ]; then
+    echo "    security parity: PASS ($SECRET_GATE_SCRIPT wired live AND in template, gate script byte-identical to live)"
+else
+    echo "    security parity: PASS (live does not wire $SECRET_GATE_SCRIPT — nothing to enforce)"
+fi
+PARITY_STATUS="PASS"
+
+# --- Write the manifest now — BOTH hard-fail g2 gates have passed --------
+# (post-conditions check above + security parity above). Sorted, stable
+# ordering so re-runs with no source changes produce byte-identical files.
+{
+    echo "# export-manifest.txt — expected export contents, derived from SOURCE."
+    echo "# Regenerated by tools/export.sh on every run. Sorted for stable diffs."
+    echo "## a. home/skills/"
+    printf '%s\n' "${EXPECTED_SKILLS[@]}" | sort
+    echo "## b. home/scripts/"
+    printf '%s\n' "${EXPECTED_SCRIPTS[@]}" | sort
+    echo "## d. project-template/"
+    printf '%s\n' "${EXPECTED_TEMPLATE[@]}" | sort
+    echo "## e. docs/"
+    printf '%s\n' "${EXPECTED_DOCS[@]}" | sort
+} > "$MANIFEST_FILE"
+echo "    manifest written: $MANIFEST_FILE"
+
+# --- 3. Rider 2 — copy-B staleness WARN (WARN-ONLY, never fails) ----------
+# Diffs copy B's scripts/*.py set against the LIVE-WIRED script set (parsed
+# from live Mantikli settings.json, not copy B's own settings.json.template
+# — the wiring is the source of truth for "this script matters enough to
+# run every session"). Any live-wired script not present in copy B's
+# scripts/ prints a WARN line. This is expected to fire for Wave-1-born
+# scripts (posttooluse_qa_guard.py, hook_latch.py, sessionstart_recovery.py,
+# etc.) that are deliberately not backfilled yet — that is CORRECT, this is
+# the detector the council adopted instead of a forced sync.
+echo "--> [g2] rider 2: copy-B staleness (WARN-only)"
+
+declare -a LIVE_WIRED_SCRIPTS=()
+if [ -f "$LIVE_SETTINGS" ]; then
+    while IFS= read -r name; do
+        LIVE_WIRED_SCRIPTS+=("$name")
+    done < <(grep -oE 'scripts/[A-Za-z0-9_]+\.py' "$LIVE_SETTINGS" | sed 's|scripts/||' | sort -u)
+fi
+
+declare -a STALE_MISSING=()
+for name in "${LIVE_WIRED_SCRIPTS[@]}"; do
+    if [ ! -f "$SRC_TEMPLATE/scripts/$name" ]; then
+        STALE_MISSING+=("$name")
+    fi
+done
+
+STALE_COUNT="${#STALE_MISSING[@]}"
+if [ "$STALE_COUNT" -gt 0 ]; then
+    stale_csv="$(printf '%s, ' "${STALE_MISSING[@]}")"
+    stale_csv="${stale_csv%, }"
+    echo "    WARN: copy-B is missing live-wired scripts: $stale_csv"
+else
+    echo "    rider 2: copy-B has every live-wired script — no staleness"
 fi
 
 # =========================================================================
@@ -331,5 +652,8 @@ echo "    scripts/files copied: $SCRIPTS_COPIED"
 echo "    nested dirs removed:  $NESTED_REMOVED"
 echo "    sed replacements applied:   $SED_APPLIED"
 echo "    sed replacements NOT found: $SED_NOT_FOUND"
+echo "    manifest post-conditions:   $MANIFEST_STATUS"
+echo "    hook-diff security parity:  $PARITY_STATUS"
+echo "    copy-B staleness WARNs:     $STALE_COUNT"
 echo "    gitleaks secret scan:       $GITLEAKS_STATUS"
 echo "==> Done."

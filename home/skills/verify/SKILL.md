@@ -93,7 +93,7 @@ if missing_list:
 python scripts/size_guard.py 2>&1
 ```
 
-### Kontrol 5 — Hooks Aktif mi
+### Kontrol 5 — Hooks Aktif mi + Hook Health
 
 ```bash
 PYTHONIOENCODING=utf-8 python -c "
@@ -101,12 +101,21 @@ import json
 s = json.load(open('.claude/settings.json', encoding='utf-8'))
 h = s.get('hooks', {})
 print(f'Hooks aktif: {len(h)} kategori → {list(h.keys())}')
-expected = {'SessionStart', 'PreToolUse', 'PostToolUse', 'Stop'}
+expected = {'SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'Stop'}
 missing = expected - set(h.keys())
 if missing: print(f'  EKSIK: {missing}')
 else: print('  Tum kategoriler mevcut')
 "
+
+# Hook-health: canned payload through each file-based hook script (O2, os-remap).
+# Executes hooks for real — a dead/dying hook FAILs here, config presence alone
+# does not prove liveness. Also reads+archives tasks/.trajectory_errors.log and
+# prints calibration born-on dates. Project-local; skip silently if absent.
+[ -f scripts/hook_health.py ] && PYTHONIOENCODING=utf-8 python scripts/hook_health.py
 ```
+
+> Hook-health FAIL (exit 1) = GENEL STATUS **FAIL** — bir hook script çöktü demektir.
+> WARN (error-log non-empty) = değerlendir; log tail'i incele, arşivlendi.
 
 ### Kontrol 6 — Pre-commit Config
 

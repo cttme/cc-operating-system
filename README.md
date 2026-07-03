@@ -111,8 +111,9 @@ Then, in a new Claude Code session inside your project:
 
 ## Maintaining the snapshot (for the author)
 
-This repo is a **snapshot** of a live `~/.claude/` config. To refresh it after changing
-your live skills/rules/scripts:
+This repo is a **best-effort snapshot** of a live system, exported via `tools/export.sh` —
+the live machine (`~/.claude/` + the source project's `.claude/`) is authoritative, not
+this repo. To refresh it after changing your live skills/rules/scripts:
 
 ```bash
 bash tools/export.sh
