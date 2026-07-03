@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# pre-push — gitleaks secret gate (fail-closed) for this repo.
+#
+# What it is: a git pre-push hook that runs a git-AWARE, full-history
+# gitleaks scan before allowing a push. Pushing publishes history, not just
+# the working tree, so this scans the whole repo's commit history (unlike
+# tools/export.sh's step [h], which scans only the working tree at export
+# time). If gitleaks can't be found or errors, the push is BLOCKED — a
+# missing scanner must never silently let a push through.
+#
+# This file is VERSIONED (tracked in tools/hooks/), but git only executes
+# hooks from .git/hooks/, which is NOT versioned. Reinstall after a fresh
+# clone or if .git/hooks/pre-push ever goes missing:
+#
+#   cp tools/hooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+#
+# Git invokes pre-push with two args (remote name, remote URL) and feeds
+# <local-ref> <local-sha1> <remote-ref> <remote-sha1> lines on stdin — this
+# hook doesn't need the ref list (it scans the whole repo), so stdin is
+# drained safely without assuming it's present (works under manual
+# invocation with </dev/null too).
+
+set -euo pipefail
+
+# Drain stdin if present; tolerate manual invocation with no stdin ref lines.
+while read -r _local_ref _local_sha _remote_ref _remote_sha 2>/dev/null; do
+    :
+done
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+WINGET_GITLEAKS="$HOME/AppData/Local/Microsoft/WinGet/Packages/Gitleaks.Gitleaks_Microsoft.Winget.Source_8wekyb3d8bbwe/gitleaks.exe"
+
+resolve_gitleaks() {
+    # 1. Explicit override via $GITLEAKS_BIN — honored strictly, no fallthrough
+    #    on failure (a wrong override should fail, not be silently substituted).
+    if [ -n "${GITLEAKS_BIN:-}" ]; then
+        if [ -x "$GITLEAKS_BIN" ] || command -v "$GITLEAKS_BIN" >/dev/null 2>&1; then
+            printf '%s\n' "$GITLEAKS_BIN"
+            return 0
+        fi
+        return 2
+    fi
+    # 2. PATH lookup.
+    if command -v gitleaks >/dev/null 2>&1; then
+        command -v gitleaks
+        return 0
+    fi
+    # 3. Fallback: known WinGet install path.
+    if [ -x "$WINGET_GITLEAKS" ]; then
+        printf '%s\n' "$WINGET_GITLEAKS"
+        return 0
+    fi
+    return 1
+}
+
+GITLEAKS_RC=0
+GITLEAKS_CMD="$(resolve_gitleaks)" || GITLEAKS_RC=$?
+
+if [ "$GITLEAKS_RC" -eq 2 ]; then
+    echo ""
+    echo "============================================================"
+    echo "PUSH BLOCKED — gitleaks not found"
+    echo "  \$GITLEAKS_BIN was explicitly set to '$GITLEAKS_BIN' but is"
+    echo "  not executable / not resolvable. An explicit override that"
+    echo "  is broken is treated as a hard error, not silently ignored."
+    echo "  This hook is fail-closed."
+    echo "  Install hint: winget install Gitleaks.Gitleaks"
+    echo "============================================================"
+    exit 1
+elif [ "$GITLEAKS_RC" -ne 0 ] || [ -z "$GITLEAKS_CMD" ]; then
+    echo ""
+    echo "============================================================"
+    echo "PUSH BLOCKED — gitleaks not found; this hook is fail-closed."
+    echo "  A missing scanner must never silently let a push through."
+    echo "  Install hint: winget install Gitleaks.Gitleaks"
+    echo "============================================================"
+    exit 1
+fi
+
+echo "--> pre-push: gitleaks full-history scan ($GITLEAKS_CMD)"
+
+# Git-aware mode (no --no-git): scans full commit history, since a push
+# publishes history, not just the working tree.
+set +e
+GITLEAKS_OUTPUT="$("$GITLEAKS_CMD" detect --source "$REPO_ROOT" --redact 2>&1)"
+GITLEAKS_SCAN_RC=$?
+set -e
+
+if [ "$GITLEAKS_SCAN_RC" -ne 0 ]; then
+    echo ""
+    echo "============================================================"
+    echo "PUSH BLOCKED — potential secret detected in repo history"
+    echo "============================================================"
+    echo "$GITLEAKS_OUTPUT"
+    echo "============================================================"
+    echo "Fix/scrub the finding (or confirm it's a false positive)"
+    echo "before pushing. This hook is fail-closed."
+    echo "============================================================"
+    exit 1
+fi
+
+echo "    gitleaks: no leaks found — PASS"
+exit 0

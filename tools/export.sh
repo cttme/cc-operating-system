@@ -37,6 +37,7 @@ SCRIPTS_COPIED=0
 NESTED_REMOVED=0
 SED_APPLIED=0
 SED_NOT_FOUND=0
+GITLEAKS_STATUS="not run"
 
 echo "==> Exporting workflow OS snapshot into $REPO_ROOT"
 
@@ -233,6 +234,94 @@ else
 fi
 
 # =========================================================================
+# h. gitleaks secret scan (fail-closed gate)
+# =========================================================================
+# Scans the exported WORKING TREE (this repo's uncommitted files, right after
+# the copy/sanitize steps above) for secrets before the export is allowed to
+# be considered successful. Fail-closed: if gitleaks can't be found or run,
+# the export ABORTS — a missing scanner must never silently skip the scan.
+echo "--> [h] gitleaks secret scan"
+
+WINGET_GITLEAKS="$HOME/AppData/Local/Microsoft/WinGet/Packages/Gitleaks.Gitleaks_Microsoft.Winget.Source_8wekyb3d8bbwe/gitleaks.exe"
+
+resolve_gitleaks() {
+    # 1. Explicit override via $GITLEAKS_BIN. If the caller set it, honor it
+    #    strictly — do NOT fall through to PATH/WinGet on failure. An explicit
+    #    override that's wrong should fail loudly, not be silently substituted.
+    if [ -n "${GITLEAKS_BIN:-}" ]; then
+        if [ -x "$GITLEAKS_BIN" ] || command -v "$GITLEAKS_BIN" >/dev/null 2>&1; then
+            printf '%s\n' "$GITLEAKS_BIN"
+            return 0
+        fi
+        return 2
+    fi
+    # 2. PATH lookup.
+    if command -v gitleaks >/dev/null 2>&1; then
+        command -v gitleaks
+        return 0
+    fi
+    # 3. Fallback: known WinGet install path.
+    if [ -x "$WINGET_GITLEAKS" ]; then
+        printf '%s\n' "$WINGET_GITLEAKS"
+        return 0
+    fi
+    return 1
+}
+
+GITLEAKS_RC=0
+GITLEAKS_CMD="$(resolve_gitleaks)" || GITLEAKS_RC=$?
+
+if [ "$GITLEAKS_RC" -eq 2 ]; then
+    echo ""
+    echo "============================================================"
+    echo "EXPORT ABORTED — gitleaks not found"
+    echo "  \$GITLEAKS_BIN was explicitly set to '$GITLEAKS_BIN' but is"
+    echo "  not executable / not resolvable. An explicit override that"
+    echo "  is broken is treated as a hard error, not silently ignored."
+    echo "  The export gate is fail-closed."
+    echo "  Install hint: winget install Gitleaks.Gitleaks"
+    echo "============================================================"
+    exit 1
+elif [ "$GITLEAKS_RC" -ne 0 ] || [ -z "$GITLEAKS_CMD" ]; then
+    echo ""
+    echo "============================================================"
+    echo "EXPORT ABORTED — gitleaks not found; the export gate is"
+    echo "  fail-closed. A missing scanner must never silently skip"
+    echo "  the secret scan."
+    echo "  Install hint: winget install Gitleaks.Gitleaks"
+    echo "============================================================"
+    exit 1
+fi
+
+echo "    using gitleaks: $GITLEAKS_CMD"
+
+# --no-git treats the repo as a plain directory (verified empirically: it
+# scans only the working-tree files, NOT .git/ internals — a run against
+# this repo scanned exactly the working-tree byte count, not
+# working-tree + .git object-store bytes, so no exclusion flag is needed).
+set +e
+GITLEAKS_OUTPUT="$("$GITLEAKS_CMD" detect --no-git --source "$REPO_ROOT" --redact 2>&1)"
+GITLEAKS_SCAN_RC=$?
+set -e
+
+if [ "$GITLEAKS_SCAN_RC" -ne 0 ]; then
+    GITLEAKS_STATUS="FAIL ($GITLEAKS_SCAN_RC findings/error)"
+    echo ""
+    echo "============================================================"
+    echo "EXPORT ABORTED — potential secret detected in export tree"
+    echo "============================================================"
+    echo "$GITLEAKS_OUTPUT"
+    echo "============================================================"
+    echo "Fix the finding (or confirm it's a false positive) before"
+    echo "re-running the export. The export gate is fail-closed."
+    echo "============================================================"
+    exit 1
+fi
+
+GITLEAKS_STATUS="PASS"
+echo "    gitleaks: no leaks found — PASS"
+
+# =========================================================================
 # Summary
 # =========================================================================
 echo ""
@@ -242,4 +331,5 @@ echo "    scripts/files copied: $SCRIPTS_COPIED"
 echo "    nested dirs removed:  $NESTED_REMOVED"
 echo "    sed replacements applied:   $SED_APPLIED"
 echo "    sed replacements NOT found: $SED_NOT_FOUND"
+echo "    gitleaks secret scan:       $GITLEAKS_STATUS"
 echo "==> Done."
