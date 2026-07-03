@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # export.sh — re-runnable snapshot exporter.
 #
-# Copies + sanitizes the live Claude Code "workflow operating system" from
+# Copies the live Claude Code "workflow operating system" from
 # ~/.claude/ (global) and D:/cc/Mantikli/.claude/ (project) into this repo's
 # home/, project-template/, docs/, and PORTABILITY.md.
 #
+# Sanitize-at-source (A-P2, 2026-07-03): the live sources under ~/.claude/skills/
+# are themselves free of project-specific strings, so this script no longer
+# rewrites copied content — it only copies + validates.
+#
 # Safe to re-run repeatedly: destination subtrees are wiped (rm -rf) before
-# each copy, and the sed sanitization rules are idempotent.
+# each copy.
 #
 # Must be run in Git Bash (POSIX sh) on Windows, or any POSIX shell elsewhere.
 
@@ -35,8 +39,6 @@ SRC_PORTABILITY="$MANTIKLI_CLAUDE/rules/PORTABILITY.md"
 SKILLS_COPIED=0
 SCRIPTS_COPIED=0
 NESTED_REMOVED=0
-SED_APPLIED=0
-SED_NOT_FOUND=0
 GITLEAKS_STATUS="not run"
 MANIFEST_STATUS="not run"
 PARITY_STATUS="not run"
@@ -198,49 +200,7 @@ fi
 # verbatim copy would reference missing files. Edit PORTABILITY.md by hand.
 echo "--> [f] PORTABILITY.md (repo-owned — skipped, not auto-synced)"
 
-# =========================================================================
-# g. sed sanitization (idempotent — applied to COPIED files only)
-# =========================================================================
-echo "--> [g] sed sanitization"
-
-VERIFY_SKILL="$DEST_SKILLS/verify/SKILL.md"
-SESSION_END_SKILL="$DEST_SKILLS/session-end/SKILL.md"
-ASK_LOCAL_SKILL="$DEST_SKILLS/ask-local/SKILL.md"
-
-# g1. verify/SKILL.md — "Mantikli `/clear` öncesi:" line → "Before `/clear`:"
-if [ -f "$VERIFY_SKILL" ] && grep -q 'Mantikli.*`/clear`.*öncesi:' "$VERIFY_SKILL"; then
-    sed -i -E 's/.*Mantikli.*`\/clear`.*öncesi:.*/- **Before `\/clear`:** Devir öncesi son sağlık kontrolu/' "$VERIFY_SKILL"
-    SED_APPLIED=$((SED_APPLIED + 1))
-    echo "    [applied] verify/SKILL.md: Mantikli /clear line"
-else
-    SED_NOT_FOUND=$((SED_NOT_FOUND + 1))
-    echo "    [NOT FOUND] verify/SKILL.md: Mantikli /clear line"
-fi
-
-# g2. session-end/SKILL.md — "Eski mekanizma fallback — Mantikli'de /onboard..." line
-if [ -f "$SESSION_END_SKILL" ] && grep -q "Eski mekanizma fallback.*Mantikli'de /onboard kullanmazsa kullanıcı kopyala-yapıştır için:" "$SESSION_END_SKILL"; then
-    sed -i "s/Eski mekanizma fallback.*Mantikli'de \/onboard kullanmazsa kullanıcı kopyala-yapıştır için:/Fallback mechanism — if \/onboard isn't used, for copy-paste:/" "$SESSION_END_SKILL"
-    SED_APPLIED=$((SED_APPLIED + 1))
-    echo "    [applied] session-end/SKILL.md: fallback line"
-else
-    SED_NOT_FOUND=$((SED_NOT_FOUND + 1))
-    echo "    [NOT FOUND] session-end/SKILL.md: fallback line"
-fi
-
-# g3. ask-local/SKILL.md — düzhesap parenthetical (spans two lines in source)
-if [ -f "$ASK_LOCAL_SKILL" ] && grep -q 'düzhesap' "$ASK_LOCAL_SKILL"; then
-    # Collapse the two-line parenthetical into the sanitized single replacement.
-    # Source pattern (across 2 lines):
-    #   ... (Project-specific examples in düzhesap: `matcher/fuzzy` match
-    #   decisions, price & stock calls, `POLICY.md`.) A YELLOW ...
-    perl -0pi -e "s/\(Project-specific examples in düzhesap: \`matcher\/fuzzy\` match\s*\n\s*decisions, price & stock calls, \`POLICY\.md\`\.\)/(Project-specific examples: record-matching decisions, money\/pricing calls, your policy doc.)/" "$ASK_LOCAL_SKILL" 2>/dev/null \
-        && SED_APPLIED=$((SED_APPLIED + 1)) \
-        && echo "    [applied] ask-local/SKILL.md: düzhesap parenthetical" \
-        || { SED_NOT_FOUND=$((SED_NOT_FOUND + 1)); echo "    [NOT FOUND] ask-local/SKILL.md: düzhesap parenthetical"; }
-else
-    SED_NOT_FOUND=$((SED_NOT_FOUND + 1))
-    echo "    [NOT FOUND] ask-local/SKILL.md: düzhesap parenthetical"
-fi
+# (former section g — sed sanitization — deleted 2026-07-03: sanitize-at-source, A-P2; see git history)
 
 # =========================================================================
 # g2. export manifest + post-conditions (A-P1 core + O6 + council rider 2)
@@ -650,8 +610,6 @@ echo "==> Export summary"
 echo "    skills copied:        $SKILLS_COPIED"
 echo "    scripts/files copied: $SCRIPTS_COPIED"
 echo "    nested dirs removed:  $NESTED_REMOVED"
-echo "    sed replacements applied:   $SED_APPLIED"
-echo "    sed replacements NOT found: $SED_NOT_FOUND"
 echo "    manifest post-conditions:   $MANIFEST_STATUS"
 echo "    hook-diff security parity:  $PARITY_STATUS"
 echo "    copy-B staleness WARNs:     $STALE_COUNT"

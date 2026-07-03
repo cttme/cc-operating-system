@@ -73,6 +73,6 @@ to ask — so before automating *any* task, resolve the middle tier in advance:
 > actually need it. A workflow that asks permission for everything trains the human to
 > rubber-stamp — which is worse than not asking.
 
-_Adapted from düzhesap's `feedback_auto_commit_on_suggestion` (standing commit
-permission) generalized to the full action surface. Tune the lists per project; the
-reversibility test is the invariant._
+_Adapted from an earlier project's `feedback_auto_commit_on_suggestion` (standing
+commit permission) generalized to the full action surface. Tune the lists per
+project; the reversibility test is the invariant._

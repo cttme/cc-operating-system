@@ -2,8 +2,8 @@
 # Foundation — How to Add New Code
 
 > The "how" — checklist before adding files, endpoints, tables, or dependencies.
-> Generic baseline (backported from düzhesap). Add stack-specific rules as the
-> project earns them; promote recurring ones via `/retro` → BACKPORT.md.
+> Generic baseline (backported from an earlier project). Add stack-specific rules
+> as the project earns them; promote recurring ones via `/retro` → BACKPORT.md.
 
 ## Before adding a new file
 

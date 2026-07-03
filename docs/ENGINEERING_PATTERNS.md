@@ -15,8 +15,9 @@
 
 ### Instrument before you optimize
 "Improve X" is blind until X is measured. Build the smallest honest meter first, then
-let the data pick the lever. *(düzhesap Phase A: "improve tokens" → measured → found 97%
-is model-mix, not the assumed resume-tax; the real fix followed the number.)*
+let the data pick the lever. *(An earlier project's Phase A: "improve tokens" →
+measured → found 97% is model-mix, not the assumed resume-tax; the real fix followed
+the number.)*
 
 ### Rigor scales with irreversibility, not file importance
 Classify each change as a **one-way** (hard-to-undo: schema, public API, data migration,
@@ -54,7 +55,8 @@ catch-all.
 Before collapsing a schema field, renaming a key, or changing what a function emits,
 grep every consumer outside the producer (`*.py`, `*.ts`, `*.tsx`, **and** `tests/`).
 Zero hits → safe to change. One+ hits → keep + adapt. Don't pre-judge by the field's
-name; the grep is cheap and decisive. *(Recurred across multiple düzhesap sessions.)*
+name; the grep is cheap and decisive. *(Recurred across multiple sessions on an
+earlier project.)*
 
 ### Eyeball before you delete (dead-code)
 A reference count of 2 is not proof of "dead". Look at each occurrence — `console.error("x")`,
@@ -81,5 +83,5 @@ stale and lies.
 
 ---
 
-_Seeded 2026-06-14 from düzhesap (Workflow OS Phase D3). Add a pattern only when it
-clears the 2+-project promotion gate; cite the projects/lessons in the entry._
+_Seeded 2026-06-14 from an earlier project (Workflow OS Phase D3). Add a pattern only
+when it clears the 2+-project promotion gate; cite the projects/lessons in the entry._
