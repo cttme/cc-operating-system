@@ -3,9 +3,17 @@
 
 WHY: "improve token consumption" is blind without knowing the Opus/Sonnet mix and
 the resume-tax (cache_creation) share. ccusage does NOT expose a per-model split in
-its JSON, so we aggregate from the source of truth: Claude Code transcript JSONL
-(~/.claude/projects/*/*.jsonl). Every assistant message records `message.model` +
-`message.usage` (input/output/cache_creation/cache_read tokens).
+its JSON, so we aggregate from the source of truth: Claude Code transcript JSONL.
+Every assistant message records `message.model` + `message.usage`
+(input/output/cache_creation/cache_read tokens).
+
+Transcripts live in two places and we read BOTH:
+  - main sessions:  ~/.claude/projects/<proj>/<session-uuid>.jsonl
+  - subagents:      ~/.claude/projects/<proj>/<session-uuid>/subagents/agent-*.jsonl
+The nested subagent files hold delegated Sonnet/Haiku spend. Reading only the
+top-level files made all subagent cost invisible and systematically over-reported
+the Opus share. Entries are deduped by `uuid` so an inlined sidechain (if a future
+version writes one) can't be double-counted.
 
 USAGE:
   python scripts/cost_breakdown.py                 # today, one-line summary (stdout)
@@ -58,8 +66,14 @@ def rate(model: str) -> dict[str, float]:
 def collect(cutoff: datetime) -> dict[str, dict[str, float]]:
     """Returns {model: {in,out,cc,cr,cost,n}} aggregated across all projects."""
     agg: dict[str, dict[str, float]] = {}
-    pattern = os.path.expanduser("~/.claude/projects/*/[0-9a-f]*.jsonl")
-    for path in glob.glob(pattern):
+    seen: set[str] = set()  # dedup by entry uuid (defensive vs inlined sidechains)
+    # Top-level session transcripts AND nested subagent transcripts. The subagents/
+    # glob is what makes delegated Sonnet/Haiku spend visible.
+    patterns = [
+        os.path.expanduser("~/.claude/projects/*/[0-9a-f]*.jsonl"),
+        os.path.expanduser("~/.claude/projects/*/*/subagents/*.jsonl"),
+    ]
+    for path in sorted({p for pat in patterns for p in glob.glob(pat)}):
         # Skip files whose last write predates the window entirely.
         try:
             if datetime.fromtimestamp(os.path.getmtime(path), UTC) < cutoff:
@@ -78,6 +92,11 @@ def collect(cutoff: datetime) -> dict[str, dict[str, float]]:
                     continue
                 if o.get("type") != "assistant":
                     continue
+                uid = o.get("uuid")
+                if uid is not None:
+                    if uid in seen:
+                        continue
+                    seen.add(uid)
                 _m = (o.get("message") or {}).get("model") or ""
                 if _m.startswith("<") or not _m:
                     continue  # skip <synthetic> / placeholder entries
