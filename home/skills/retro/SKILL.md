@@ -85,6 +85,10 @@ Any `lessons.md` entry with **Count ≥ 2** has recurred → promote to a stable
 `.claude/rules/` entry (or extend an existing one). Recurrence = it's not a
 one-off; it's a pattern the automatic gates should enforce.
 
+Also rank catches by `Independence-axis:` (instrument/framing/checker/time): axes with
+zero catches over ~5 sessions = sunset candidates for the doublecheck-battery prose in
+`thinking-pipeline.md` (package-rider: that battery and this reader ship/die together).
+
 ### Adım 5b — Thinking-method measurement
 
 Ask, for any `/triz`/`/hats`/`/council` runs in-window: **did a thinking-method
