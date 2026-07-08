@@ -48,6 +48,7 @@
 | `onboard/` · `session-end/` | **PORTABLE** | session bookkeeping (load state / write handoff). |
 | `bootstrap-project/` · `kickoff/` | **PORTABLE** | new-project setup + project-zero interview. |
 | `ask-local/` · `double-stitch/` | **PORTABLE** | route work to a local model + validate its output. |
+| `ask-codex/` | **MIXED** | delegate spec-driven edits to the OpenAI Codex CLI (Claude plans, Codex executes). Portable doctrine; the worker (`scripts/ask-codex.ps1`) is Windows-first + assumes a local Codex install — rewrite the binary-resolution / shell for your OS, and note it needs your own OpenAI quota. |
 | `cave/` · `normal/` | **PORTABLE** | output-verbosity modes. |
 | `commit.md` · `plan.md` · `review.md` | **PORTABLE** | commit / plan / review helpers. |
 

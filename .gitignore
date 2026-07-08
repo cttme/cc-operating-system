@@ -3,3 +3,10 @@ __pycache__/
 *.pyc
 .preflight/
 .DS_Store
+# Local-model / Codex runtime dirs (prompts + logs may carry business data;
+# never commit or export — see SEC-P7 firewall). Created lazily at run time.
+.ollama-log/
+.ollama-cache/
+.ollama-prompts/
+.codex-log/
+.codex-prompts/
