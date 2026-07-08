@@ -18,6 +18,14 @@ import os
 import sys
 from pathlib import Path
 
+# Windows console UTF-8 fix -- cp1254 crashes on the emoji/box-drawing output below.
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 ROOT = Path(__file__).parent.parent
 
 # (path, soft_limit, hard_limit, message_template)
