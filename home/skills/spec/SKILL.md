@@ -62,6 +62,14 @@ requirement, it's a wish.
 Translate requirements → approach: files to touch, the migration/back-compat strategy,
 the order of operations, the rollback. Reference R-numbers so plan ↔ spec stay linked.
 
+`plan.md` MUST end with a **Confidence & open risks** section (mandatory — one-way doors
+raise the stakes on unstated uncertainty). Answer *"what am I not confident in?"* as a
+list; per item: **(a)** the assumption, **(b)** the cheapest way to falsify it, **(c)**
+confidence low|med|high, **(d) de-risk by:** `probe` (one-time spike against reality —
+external unknowns), `test` (repeatable regression test — our own code), or `judgment`
+(decide after use). Resolve every `probe` item **before the first irreversible commit**.
+"Nothing" is only allowed as an explicit, justified line.
+
 ### Adım 4 — Write `tasks.md`
 Ordered, checkbox tasks, each tagged with the R-number(s) it satisfies. This is the
 build checklist. Keep tasks small enough to verify individually (per the verify-each-
