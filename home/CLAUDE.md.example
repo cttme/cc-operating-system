@@ -23,6 +23,8 @@
 - After a data / IO change: exercise it with a small sample — don't assume.
 - After a DB change: run the migration and verify it.
 - Ask: "would a senior engineer approve this?"
+- Every plan/spec ends by answering **"what am I not confident in?"** — each item gets a
+  falsification step + a de-risk tag (`probe` / `test` / `judgment`). See `/plan`, `/spec`.
 
 ## Subagent use
 - Delegate research, exploration, and parallel analysis to subagents.
@@ -34,6 +36,15 @@
 - Reading 300+ line archive/reference files for context → summarize with `/ask-local` first.
 - Translation / single-shot snippet work → local model.
 - Code generation / refactor / multi-step reasoning → **never** local; that needs Claude.
+
+## Codex delegation (optional — OpenAI Codex / `ask-codex`)
+- Division of labor: **Claude plans and thinks; Codex edits and executes.** Treat Codex
+  as a subagent — delegate a self-contained spec, doublecheck the diff, tell it what to
+  fix (`-Resume`), or finish in-repo if it's cut off (`status=truncated`).
+- Delegate only **decided, verifiable** work (spec-driven implementation, mechanical
+  refactor, boilerplate). Architecture / ambiguity / one-way doors stay with Claude.
+- Saves Claude **context** (not money — spend shifts to your OpenAI quota). Codex sends
+  workspace code to OpenAI: keep secret-bearing dirs out.
 
 ## Self-improvement
 - When the user corrects you, write it to the project's lessons log (`tasks/lessons.md`).

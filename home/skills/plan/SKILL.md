@@ -46,6 +46,15 @@ A plan is worth its overhead for **meaningful, multi-step, reversible** work. It
    doors, advisory on two-way); don't silently drop it.
 5. **Model tier** used to plan + recommended for execution.
 6. **Budget tier:** local | Sonnet | Opus — the recommended execution tier for this task (delegate-by-default: Sonnet unless it's a one-way door or needs algo / data-integrity / architectural reasoning → Opus; trivial single-token → local).
+7. **Confidence & open risks** (MANDATORY closing section — never omit). Answer *"what am
+   I not confident in?"* as a short list. Per item: **(a)** the assumption / thing you're
+   not fully sure of, **(b)** the cheapest way to falsify it, **(c)** confidence
+   low|med|high, **(d) de-risk by:** `probe` (one-time spike against reality — external
+   unknowns), `test` (repeatable regression test — our own code), or `judgment` (can't be
+   mechanically settled; decide after use). "Nothing" is only allowed as an explicit,
+   justified line — an empty section is not. This converts unstated uncertainty into
+   concrete pre-implementation actions and forces each unknown to name *how* it gets
+   retired (not every unknown is test-shaped).
 
 ## Finish
 
