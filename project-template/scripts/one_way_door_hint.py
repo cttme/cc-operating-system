@@ -41,6 +41,22 @@ def _match(path: str) -> str | None:
     return None
 
 
+def hint_text(reason: str) -> str:
+    """Advisory text for a one-way-door edit. Shared by main() (standalone hook)
+    and pretooluse_edit_guard.py (the consolidated single-stdin-consumer hook),
+    so both emit identical text. Extracted so the guard's
+    `from scripts.one_way_door_hint import hint_text` import resolves — without it
+    that import raised ImportError and the guard's one-way-door advisory silently
+    never fired."""
+    return (
+        f"⚠ One-way door — this edit touches {reason}, which is hard/expensive to undo "
+        f"once shipped. Per the reversibility axis (change-protocol.md), one-way doors "
+        f"earn rigor: consider `/spec` and `/council` before committing, plus a "
+        f"`decisions.md` entry with `Reversibility: one-way`. Two-way edits ignore this. "
+        f"(Advisory — never blocks.)"
+    )
+
+
 def main() -> int:
     try:
         data = json.load(sys.stdin)
@@ -56,13 +72,7 @@ def main() -> int:
     if not reason:
         return 0
 
-    hint = (
-        f"⚠ One-way door — this edit touches {reason}, which is hard/expensive to undo "
-        f"once shipped. Per the reversibility axis (change-protocol.md), one-way doors "
-        f"earn rigor: consider `/spec` and `/council` before committing, plus a "
-        f"`decisions.md` entry with `Reversibility: one-way`. Two-way edits ignore this. "
-        f"(Advisory — never blocks.)"
-    )
+    hint = hint_text(reason)
     print(json.dumps({
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
