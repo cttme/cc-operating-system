@@ -22,7 +22,13 @@
 #                           default: workspace-write
 #   -NoNetwork              disable sandbox network access (default: ON)
 #   -ProjectRoot <path>     working root passed to codex --cd (default: cwd)
-#   -Model       <string>   optional model override (default: config gpt-5.5)
+#   -Model       <string>   optional model override (default: config gpt-5.6-sol)
+#   -ReasoningEffort <str>  minimal|low|medium|high (+ model-specific e.g. max);
+#                           overrides config model_reasoning_effort. WITHOUT this,
+#                           -Model inherits the global effort (e.g. luna@high) and
+#                           loses its cost benefit — always pair a cheap model with
+#                           a lower effort. Passed as -c model_reasoning_effort=<v>.
+#   -Profile     <string>   codex --profile <name> (route profile: model+effort combo)
 #   -TimeoutSec  <int>      kill runaway runs (default: 900)
 #   -NoLog                  do not write to .codex-log (privacy)
 # OUTPUTS:
@@ -70,6 +76,10 @@ param(
     [string]$ProjectRoot = (Get-Location).Path,
 
     [string]$Model,
+
+    [string]$ReasoningEffort,
+
+    [string]$Profile,
 
     [int]$TimeoutSec = 900,
 
@@ -161,7 +171,12 @@ if (-not $IsResume) {
 }
 if (-not $NoNetwork) { $argList += @("-c", "sandbox_workspace_write.network_access=true") }
 $argList += @("-c", "notify=[]")          # suppress desktop notify in headless runs
-if ($Model)         { $argList += @("-m", $Model) }
+if ($Profile)         { $argList += @("--profile", $Profile) }
+if ($Model)           { $argList += @("-m", $Model) }
+# Reasoning-effort override: without this a cheap -Model still inherits the global
+# high effort (the wrapper's cost-leak bug). Passed as a config override, same
+# mechanism as notify/network above; applies to fresh and resumed runs.
+if ($ReasoningEffort) { $argList += @("-c", "model_reasoning_effort=$ReasoningEffort") }
 $argList += "-"                            # read the spec/fix from stdin
 
 # Manual quoting for .NET Framework ProcessStartInfo.Arguments (no ArgumentList)
@@ -289,6 +304,8 @@ if (-not $NoLog) {
         session       = $SessionId
         intent        = $Intent
         model         = if ($Model) { $Model } else { "config" }
+        reasoning     = if ($ReasoningEffort) { $ReasoningEffort } else { "config" }
+        profile       = if ($Profile) { $Profile } else { "" }
         sandbox       = $Sandbox
         status        = $Status
         thread_id     = $ThreadId
@@ -315,9 +332,10 @@ if (-not $NoLog) {
 
 # ---- Output contract (mirrors ask-local's ---SECTION--- style) -------------
 $ModelLabel = if ($Model) { $Model } else { "(config default)" }
+$EffortLabel = if ($ReasoningEffort) { $ReasoningEffort } elseif ($Profile) { "profile:$Profile" } else { "(config)" }
 Write-Output "---CODEX-CALL-SUMMARY---"
-Write-Output ("intent={0} | model={1} | sandbox={2} | status={3} | session={4} | files_changed={5} | ~{6}/{7} tok | {8}s | exit={9} | ckpt={10}" -f `
-    $Intent, $ModelLabel, $Sandbox, $Status, $ThreadId, $FilesChanged, $InTokens, $OutTokens, $DurStr, $ExitCode, $Checkpoint)
+Write-Output ("intent={0} | model={1} | effort={2} | sandbox={3} | status={4} | session={5} | files_changed={6} | ~{7}/{8} tok | {9}s | exit={10} | ckpt={11}" -f `
+    $Intent, $ModelLabel, $EffortLabel, $Sandbox, $Status, $ThreadId, $FilesChanged, $InTokens, $OutTokens, $DurStr, $ExitCode, $Checkpoint)
 Write-Output "---CODEX-DIFF-STAT---"
 Write-Output $DiffStat
 Write-Output "---CODEX-OUTPUT---"
