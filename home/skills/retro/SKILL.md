@@ -33,6 +33,18 @@ Read the per-model split. Flag: **Opus-on-mechanical** spend (top-tier model doi
 bookkeeping the `model_routing_hint` hook should have caught), and **resume-tax %**
 (cache_creation share). One-line verdict: is the model mix justified by the work mix?
 
+**Blind spot — the split cannot see the delegated tier.** `cost_breakdown` reports only
+*Claude* models. When the default executor is an external CLI (Codex via `ask-codex`, or any
+tool run through Bash), that work is **invisible** here and its tokens are on the other quota
+— so a low Sonnet/subagent % reads as "≈no delegation" when delegation may actually be heavy.
+Cross-check the real delegation instrument before any delegation/waste verdict:
+```bash
+for d in <in-window dates>; do cat ~/.claude/.codex-log/$d/calls.jsonl; done   # count, in/out tok, model tier
+```
+Report delegation as **count + quota volume from `.codex-log`**, not as a token-% (Claude's
+cache-reads dwarf the delegated input tokens, so a raw % is not comparable). "Opus-on-mechanical
+waste" is *unmeasurable* from the Claude split alone in a delegation-heavy window.
+
 ### Adım 1b — Cost per accepted change (outcome, not input)
 Token split (§1) is an **input** metric — it says where money went, not whether it
 bought anything. Pair it with the **outcome** metric the loop-engineering literature
