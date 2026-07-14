@@ -23,7 +23,9 @@
 
 | Rule | Tag | Ships? | Notes |
 |---|---|---|---|
-| `thinking-pipeline.md` | **PORTABLE** | ✅ | Lifecycle + reversibility selector + shared output contract. The spine. |
+| `thinking-pipeline.md` | **PORTABLE** | ✅ | Lifecycle + reversibility selector + task-start routing reflex (delegate-by-default + the design/execution split) + shared output contract + QIPT+S doublecheck battery. The spine. |
+| `verify-before-building.md` | **PORTABLE** | ✅ | "Confirm a backlog item is still pending before building" — a backlog line is a claim, not a fact. Grep examples are language-agnostic. |
+| `debugging.md` | **PORTABLE** | ✅ | Root-cause-before-fix diagnosis (4 phases + stop signals + trace-back / defense-in-depth / condition-based-waiting). Fills the gap between `/verify` (mechanical health) and QIPT+S (claim soundness). Adapted from `obra/superpowers`. |
 | `change-protocol.md` | **PORTABLE** | ✅ | Reversibility axis (one-way/two-way door) + high-risk-file protocol. The file list is project-tunable; the doc says so. |
 | `foundation.md` | **MIXED** | ✅ | "Which checker when", lifecycle stages, twin-gate scope-confirm are portable; the module-directory list is an example — replace with yours. |
 | `frontend-safety.md` | **MIXED** | ✅ | Generic web-frontend safety seed (JSON-LD, auth-token handling, modal a11y); trim to your stack. |

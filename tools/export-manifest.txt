@@ -37,6 +37,7 @@ preflight-trim.ps1
 test-ask-codex.ps1
 ## d. project-template/
 .claude/rules/change-protocol.md
+.claude/rules/debugging.md
 .claude/rules/foundation.md
 .claude/rules/frontend-safety.md
 .claude/rules/gamedev-pitfalls.md
