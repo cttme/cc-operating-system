@@ -20,14 +20,12 @@ $DestScripts   = Join-Path $RepoRoot "home/scripts"
 $DestClaudeMd  = Join-Path $RepoRoot "home/CLAUDE.md.example"
 $DestTemplate  = Join-Path $RepoRoot "project-template"
 $DestDocs      = Join-Path $RepoRoot "docs"
-$DestPortability = Join-Path $RepoRoot "PORTABILITY.md"
 
 $SrcSkills    = Join-Path $HomeClaude "skills"
 $SrcScripts   = Join-Path $HomeClaude "scripts"
 $SrcClaudeMd  = Join-Path $HomeClaude "CLAUDE.md"
 $SrcTemplate  = Join-Path $HomeClaude "templates/project-bootstrap"
 $SrcMantikliSkills = Join-Path $MantikliClaude "skills"
-$SrcPortability    = Join-Path $MantikliClaude "rules/PORTABILITY.md"
 
 $SkillsCopied = 0
 $ScriptsCopied = 0

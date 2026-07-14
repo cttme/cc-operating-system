@@ -34,13 +34,11 @@ DEST_SKILLS="$REPO_ROOT/home/skills"
 DEST_SCRIPTS="$REPO_ROOT/home/scripts"
 DEST_TEMPLATE="$REPO_ROOT/project-template"
 DEST_DOCS="$REPO_ROOT/docs"
-DEST_PORTABILITY="$REPO_ROOT/PORTABILITY.md"
 
 SRC_SKILLS="$HOME_CLAUDE/skills"
 SRC_SCRIPTS="$HOME_CLAUDE/scripts"
 SRC_TEMPLATE="$HOME_CLAUDE/templates/project-bootstrap"
 SRC_MANTIKLI_SKILLS="$MANTIKLI_CLAUDE/skills"
-SRC_PORTABILITY="$MANTIKLI_CLAUDE/rules/PORTABILITY.md"
 
 # --- counters ------------------------------------------------------------
 SKILLS_COPIED=0
@@ -204,9 +202,10 @@ fi
 # f. PORTABILITY.md — repo-owned, NOT auto-synced.
 # =========================================================================
 # The repo's PORTABILITY.md is adapted (it documents what THIS repo ships +
-# keeps the source project's rows as labeled examples). The source manifest at
-# $SRC_PORTABILITY lists project-only rules that this repo does not ship, so a
-# verbatim copy would reference missing files. Edit PORTABILITY.md by hand.
+# keeps the source project's rows as labeled examples). The origin project's
+# manifest at docs/PORTABILITY.md lists project-only rules that this repo does
+# not ship, so a verbatim copy would reference missing files. Edit
+# PORTABILITY.md by hand.
 echo "--> [f] PORTABILITY.md (repo-owned — skipped, not auto-synced)"
 
 # (former section g — sed sanitization — deleted 2026-07-03: sanitize-at-source, A-P2; see git history)
