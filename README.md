@@ -74,8 +74,8 @@ cc-operating-system/
 │   ├── .claude/settings.json.template   hooks (model-routing, one-way-door, guards)
 │   ├── scripts/           the hook scripts (size_guard, model_routing_hint, …)
 │   └── tasks/ docs/       handoff / todo / lessons / decisions templates
-├── install/               install.sh / install.ps1 — set up an adopter machine
-├── tools/                 export.sh / export.ps1 — re-sync the snapshot from live config
+├── install/               install.sh — set up an adopter machine (requires Git Bash)
+├── tools/                 export.sh — re-sync the snapshot from live config (requires Git Bash)
 ├── docs/                  ARCHITECTURE.md + cross-project playbooks
 └── PORTABILITY.md         what's PORTABLE vs MIXED vs PROJECT
 ```
@@ -97,8 +97,16 @@ bash install/install.sh --target /path/to/your/project
 ```
 
 `install.sh` backs up any existing `~/.claude/skills`, `~/.claude/scripts`, and
-`~/.claude/templates/project-bootstrap` before writing (or pass `--force`). On Windows
-without Git Bash, use `install/install.ps1`.
+`~/.claude/templates/project-bootstrap` before writing (or pass `--force`).
+
+**Git Bash (or any POSIX shell) is required — on Windows too.** This is not just an
+installer constraint: the system it installs is bash-dependent. The `SessionStart` hook
+is a shell one-liner, and the `pre-push` secret gate is a bash script, so a machine
+without a POSIX shell cannot run the installed workflow regardless of how it was
+installed. Untested PowerShell ports of `install.sh`/`export.sh` were removed
+(2026-07-14) — they had frozen at the initial snapshot and were missing the security
+controls the shell versions gained (source-machine guard, memory/plans export firewall,
+gitleaks scan). See git history if you want to re-port them properly.
 
 Then, in a new Claude Code session inside your project:
 
