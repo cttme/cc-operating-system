@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # export.sh — re-runnable snapshot exporter.
 #
-# Copies the live Claude Code "workflow operating system" from
-# ~/.claude/ (global) and D:/cc/Mantikli/.claude/ (project) into this repo's
-# home/, project-template/, docs/, and PORTABILITY.md.
+# Copies the live Claude Code "workflow operating system" from ~/.claude/
+# (global, including the source project template) into this repo's home/,
+# project-template/, docs/, and PORTABILITY.md. Mantikli rules are compared
+# directly with the copied template by the rule-parity gate below; they are not
+# copied as project rules.
 #
 # Sanitize-at-source (A-P2, 2026-07-03): the live sources under ~/.claude/skills/
 # are themselves free of project-specific strings, so this script no longer
@@ -47,6 +49,7 @@ NESTED_REMOVED=0
 GITLEAKS_STATUS="not run"
 MANIFEST_STATUS="not run"
 PARITY_STATUS="not run"
+RULE_PARITY_STATUS="not run"
 STALE_COUNT=0
 
 echo "==> Exporting workflow OS snapshot into $REPO_ROOT"
@@ -471,6 +474,151 @@ else
 fi
 PARITY_STATUS="PASS"
 
+# --- 3. Mantikli/template rule parity = HARD FAIL (Item 13) --------------
+# These are two deliberately related copies, not a source/destination proxy:
+# the Mantikli testbed rules and the template rules that future projects ship.
+# `genericized` rows intentionally permit reviewed, project-agnostic wording,
+# but pin both reviewed bytes so a later change cannot disappear as "drift".
+echo "--> [g2] Mantikli/template rule parity"
+
+RULE_PARITY_MANIFEST="$SCRIPT_DIR/rule-parity-manifest.tsv"
+RULE_PARITY_FAILED=0
+declare -A RULE_PARITY_MODE=()
+declare -A RULE_PARITY_MANTIKLI_SHA=()
+declare -A RULE_PARITY_TEMPLATE_SHA=()
+declare -A RULE_PARITY_REASON=()
+declare -A RULE_PARITY_REQUIRED=()
+
+rule_parity_error() {
+    RULE_PARITY_FAILED=1
+    echo "    rule parity: FAIL: $*" >&2
+}
+
+sha256_for_rule() {
+    local hash_output
+    if ! hash_output="$(sha256sum "$1")"; then
+        return 1
+    fi
+    if [[ ! "$hash_output" =~ ^[[:xdigit:]]{64}[[:space:]] ]]; then
+        return 1
+    fi
+    printf '%s\n' "${hash_output%% *}"
+}
+
+if [ ! -f "$RULE_PARITY_MANIFEST" ]; then
+    rule_parity_error "missing reviewed manifest: $RULE_PARITY_MANIFEST"
+else
+    while IFS=$'\t' read -r relative_path mode mantikli_sha template_sha reason extra; do
+        [ -n "$relative_path" ] || continue
+        [[ "$relative_path" == \#* ]] && continue
+
+        if [ -n "${extra:-}" ] || [ -z "$mode" ] || [ -z "$mantikli_sha" ] || [ -z "$template_sha" ] || [ -z "$reason" ]; then
+            rule_parity_error "invalid manifest row for ${relative_path:-<empty>} (need path, mode, both hashes, and a non-empty reason)"
+            continue
+        fi
+        if [ -n "${RULE_PARITY_MODE[$relative_path]+set}" ]; then
+            rule_parity_error "duplicate manifest row: $relative_path"
+            continue
+        fi
+        case "$mode" in
+            identical|genericized)
+                ;;
+            *)
+                rule_parity_error "unknown mode '$mode' for $relative_path"
+                continue
+                ;;
+        esac
+        if [[ ! "$mantikli_sha" =~ ^[[:xdigit:]]{64}$ ]] || [[ ! "$template_sha" =~ ^[[:xdigit:]]{64}$ ]]; then
+            rule_parity_error "invalid SHA-256 value for $relative_path"
+            continue
+        fi
+        if [ "$mode" = "identical" ] && [ "$mantikli_sha" != "$template_sha" ]; then
+            rule_parity_error "identical row has different reviewed hashes: $relative_path"
+            continue
+        fi
+
+        RULE_PARITY_MODE["$relative_path"]="$mode"
+        RULE_PARITY_MANTIKLI_SHA["$relative_path"]="$mantikli_sha"
+        RULE_PARITY_TEMPLATE_SHA["$relative_path"]="$template_sha"
+        RULE_PARITY_REASON["$relative_path"]="$reason"
+    done < "$RULE_PARITY_MANIFEST"
+fi
+
+# PORTABILITY is the classification authority. Only rules that are both shipped
+# by the template and have a Mantikli peer can drift as this type of second copy;
+# profile-only packs have no peer and are outside this gate's comparison surface.
+while IFS= read -r portability_rule; do
+    [ -n "$portability_rule" ] || continue
+    mantikli_rule="$MANTIKLI_CLAUDE/rules/$portability_rule"
+    template_rule="$DEST_TEMPLATE/.claude/rules/$portability_rule"
+    if [ -f "$mantikli_rule" ] && [ -f "$template_rule" ]; then
+        RULE_PARITY_REQUIRED["$portability_rule"]=1
+        if [ -z "${RULE_PARITY_MODE[$portability_rule]+set}" ]; then
+            rule_parity_error "unlisted shipped PORTABLE/MIXED core rule: $portability_rule"
+        fi
+    fi
+done < <(awk -F'`' '/^\| `[^`]+\.md` \| \*\*(PORTABLE|MIXED)\*\*/ { print $2 }' "$REPO_ROOT/PORTABILITY.md")
+
+for relative_path in "${!RULE_PARITY_MODE[@]}"; do
+    if [ -z "${RULE_PARITY_REQUIRED[$relative_path]+set}" ]; then
+        rule_parity_error "manifest row is not a shipped PORTABLE/MIXED core rule pair: $relative_path"
+        continue
+    fi
+
+    mantikli_rule="$MANTIKLI_CLAUDE/rules/$relative_path"
+    template_rule="$DEST_TEMPLATE/.claude/rules/$relative_path"
+    if [ ! -f "$mantikli_rule" ] || [ ! -f "$template_rule" ]; then
+        rule_parity_error "missing governed file for $relative_path (Mantikli=$([ -f "$mantikli_rule" ] && echo present || echo missing), template=$([ -f "$template_rule" ] && echo present || echo missing))"
+        continue
+    fi
+
+    if ! actual_mantikli_sha="$(sha256_for_rule "$mantikli_rule")"; then
+        rule_parity_error "SHA-256 failed for Mantikli copy: $relative_path"
+        continue
+    fi
+    if ! actual_template_sha="$(sha256_for_rule "$template_rule")"; then
+        rule_parity_error "SHA-256 failed for template copy: $relative_path"
+        continue
+    fi
+
+    expected_mantikli_sha="${RULE_PARITY_MANTIKLI_SHA[$relative_path]}"
+    expected_template_sha="${RULE_PARITY_TEMPLATE_SHA[$relative_path]}"
+    mantikli_changed=0
+    template_changed=0
+    [ "$actual_mantikli_sha" = "$expected_mantikli_sha" ] || mantikli_changed=1
+    [ "$actual_template_sha" = "$expected_template_sha" ] || template_changed=1
+
+    if [ "$mantikli_changed" -eq 1 ] || [ "$template_changed" -eq 1 ]; then
+        if [ "$mantikli_changed" -eq 1 ] && [ "$template_changed" -eq 1 ]; then
+            changed_side="both Mantikli and template copies"
+        elif [ "$mantikli_changed" -eq 1 ]; then
+            changed_side="Mantikli copy"
+        else
+            changed_side="template copy"
+        fi
+        rule_parity_error "$relative_path: reviewed $changed_side changed; requires human semantic review and a reviewed manifest update (never regenerate hashes automatically)"
+        continue
+    fi
+
+    if [ "${RULE_PARITY_MODE[$relative_path]}" = "identical" ] && ! cmp -s "$mantikli_rule" "$template_rule"; then
+        rule_parity_error "$relative_path: identical mode requires byte equality"
+    fi
+done
+
+if [ "$RULE_PARITY_FAILED" -eq 1 ]; then
+    RULE_PARITY_STATUS="FAIL"
+    echo ""
+    echo "============================================================"
+    echo "EXPORT ABORTED — Mantikli/template rule parity FAILED"
+    echo "  Resolve the named copy through human semantic review."
+    echo "  Do not blindly regenerate rule-parity-manifest.tsv hashes."
+    echo "============================================================"
+    exit 1
+fi
+
+RULE_PARITY_STATUS="PASS"
+echo "    rule parity: PASS (${#RULE_PARITY_MODE[@]} governed rule pairs)"
+
 # --- Write the manifest now — BOTH hard-fail g2 gates have passed --------
 # (post-conditions check above + security parity above). Sorted, stable
 # ordering so re-runs with no source changes produce byte-identical files.
@@ -620,6 +768,7 @@ echo "    scripts/files copied: $SCRIPTS_COPIED"
 echo "    nested dirs removed:  $NESTED_REMOVED"
 echo "    manifest post-conditions:   $MANIFEST_STATUS"
 echo "    hook-diff security parity:  $PARITY_STATUS"
+echo "    Mantikli/template parity:   $RULE_PARITY_STATUS"
 echo "    copy-B staleness WARNs:     $STALE_COUNT"
 echo "    gitleaks secret scan:       $GITLEAKS_STATUS"
 echo "==> Done."
