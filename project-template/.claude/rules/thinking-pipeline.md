@@ -100,8 +100,15 @@ it a self-contained brief (a spec file) so it needs no conversation history.
 Every thinking tool (`/triz`, `/hats`, `/council`) and every plan emits:
 
 1. **Decision** + chosen option.
-2. **Evidence per claim** — `file:line` / command output / commit hash — OR an explicit
-   `⚠assumption` tag. An unverified claim is a placeholder, not a plan line.
+2. **Evidence per claim, tagged by provenance** — every load-bearing claim is one of three,
+   and says which: **observed** (`file:line` / command output / commit hash — read *directly*
+   from the source), **⊢inferred** (*derived by reasoning across sources* — a cross-file
+   "X calls Y", a "this is unused" — cite the inference chain, not just one line, so a reader
+   can trust-but-verify it), or **⚠assumption** (unverified — a placeholder, not a plan line).
+   The observed-vs-inferred split is borrowed from graphify's `EXTRACTED`-vs-`INFERRED` edge
+   tags: *what was read* is trusted differently from *what was reasoned out*, and the two
+   collapse silently unless the claim names which it is. An unverified claim is a placeholder,
+   not a plan line.
 3. **Done-gates** — deterministic ("done = X AND Y"), not a step list.
 4. **Recorded dissent** — any role/juror objection is kept, not dropped. Reversibility
    authority: a QA or Security objection is a **veto on one-way doors**, advisory on two-way.
