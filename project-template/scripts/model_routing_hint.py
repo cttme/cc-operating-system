@@ -17,6 +17,7 @@ below are generic. Çağrı: stdin'den {"prompt": "..."} gelir (UserPromptSubmit
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 
@@ -77,6 +78,47 @@ def _matches(prompt: str) -> str | None:
         if m:
             return f"mechanical pattern ({m.group(0).strip()})"
 
+    return None
+
+
+# === Section: Active-model detection ===
+
+# Backported verbatim from the Mantikli testbed's proven implementation to keep
+# the two copies in parity: detect the model of the last assistant turn from the
+# session transcript. (The template previously referenced this from
+# trajectory_log.py but never shipped the function — a backport gap.)
+
+
+def _active_model(transcript_path: str | None) -> str | None:
+    """Best-effort: return the model id of the last assistant turn, or None.
+
+    Reads the transcript jsonl tail-first so we pay for only a few lines. Any
+    parse/IO failure returns None. Consumed by trajectory_log.py, which stamps
+    each logged tool call with this model and degrades a None to "?".
+    """
+    if not transcript_path or not os.path.isfile(transcript_path):
+        return None
+    # Read only the tail — transcripts routinely exceed 500KB and this runs on
+    # every hook call under a short timeout. The last assistant turn is near the
+    # end; 256KB comfortably covers several turns even with large tool results.
+    tail_bytes = 256 * 1024
+    try:
+        size = os.path.getsize(transcript_path)
+        with open(transcript_path, "rb") as fh:
+            if size > tail_bytes:
+                fh.seek(-tail_bytes, os.SEEK_END)
+                fh.readline()  # drop the partial first line after the seek
+            lines = fh.read().decode("utf-8", "replace").splitlines()
+    except OSError:
+        return None
+    for ln in reversed(lines):
+        try:
+            d = json.loads(ln)
+        except ValueError:
+            continue
+        msg = d.get("message")
+        if d.get("type") == "assistant" and isinstance(msg, dict) and msg.get("model"):
+            return str(msg["model"])
     return None
 
 
