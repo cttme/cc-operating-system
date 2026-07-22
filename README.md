@@ -66,7 +66,7 @@ cc-operating-system/
 ├── home/                  → installs into ~/.claude/ (global, all projects)
 │   ├── skills/            the pipeline tools: triz, hats, council, verify, retro,
 │   │                      spec, onboard, session-end, bootstrap-project, kickoff,
-│   │                      ask-local, double-stitch, cave, normal (+ commit/plan/review)
+│   │                      ask-local, double-stitch, cave, normal, spend (+ commit/plan/review)
 │   ├── scripts/           new-project.py (bootstrap engine) + local-model tooling
 │   └── CLAUDE.md.example  example global preferences — edit to taste
 ├── project-template/      → scaffolded into each project

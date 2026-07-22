@@ -45,6 +45,16 @@ Report delegation as **count + quota volume from `.codex-log`**, not as a token-
 cache-reads dwarf the delegated input tokens, so a raw % is not comparable). "Opus-on-mechanical
 waste" is *unmeasurable* from the Claude split alone in a delegation-heavy window.
 
+**Cross-tool unified view (preferred, if `codeburn` installed — see `/spend`).** `codeburn`
+prices every tool's session files (Claude + Codex + …) via LiteLLM, so it closes this blind
+spot with real dollars instead of a manual `.codex-log` cat:
+```bash
+codeburn report --from <window-start> --to <today> --provider codex --format json   # priced delegated spend
+codeburn report --from <window-start> --to <today> --format json                    # unified Claude + Codex $
+```
+Reporting only — never `sync`, never install `guard`, never `optimize --apply` (see `/spend`
+for why). If codeburn is absent, the manual `.codex-log` cross-check above still applies.
+
 ### Adım 1b — Cost per accepted change (outcome, not input)
 Token split (§1) is an **input** metric — it says where money went, not whether it
 bought anything. Pair it with the **outcome** metric the loop-engineering literature
@@ -79,6 +89,15 @@ done
 List rules/docs/skills that produced no value in-window → **deletion candidates**
 (archive-don't-delete: move to `tasks/archive/`, don't `rm`). Be honest; this is
 where bloat dies.
+
+**Waste-taxonomy input (if `codeburn` installed).** `codeburn optimize --format json`
+surfaces machine-detected waste to seed this list: ghost agents/skills/commands never
+invoked, unused MCP servers paying schema overhead, bloated `CLAUDE.md`, junk/duplicate
+reads, low read:edit ratio. Treat every finding as a **candidate, not a verdict** — its
+"unused skill" detector flags rare-but-intentional ceremony (`/council`, `/spec`,
+`/kickoff`) as ghosts. **Report-not-execute holds: never `codeburn optimize --apply`;** the
+operator confirms each kill (archive-don't-delete). This is an *input* to §3, not a substitute
+for the git-based `never fired` scan above.
 
 ### Adım 4 — Backport candidates
 Universal assets created in-window (scripts, rules, hooks) that aren't
@@ -171,7 +190,8 @@ output. Structure:
 ## İlgili
 
 - `audit-meta` — the audit-only ancestor this generalizes.
-- `scripts/cost_breakdown.py` — §1 input.
+- `scripts/cost_breakdown.py` — §1 input (Claude-only split).
+- `/spend` — §1/§3 input: cross-tool priced spend + waste taxonomy (codeburn, reporting-only).
 - `.claude/rules/change-protocol.md` — reversibility axis (kills of HIGH-RISK rules).
 - `~/.claude/templates/.../BACKPORT.md` — §4 destination ledger.
 - `/council` — escalation for one-way-door findings.
